@@ -145,6 +145,7 @@ export default function App({ navigation }) {
         (doctor) =>
           doctor.name.toLowerCase().includes(text.toLowerCase()) ||
           doctor.study.toLowerCase().includes(text.toLowerCase()) ||
+          doctor.code.toLowerCase().includes(text.toLowerCase()) ||
           doctor.specialist.toLowerCase().includes(text.toLowerCase())
       );
       setFilteredDoctors(filtered);
