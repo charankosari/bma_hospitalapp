@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Text,
   View,
@@ -7,15 +7,37 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-import {  useRoute } from "@react-navigation/native";
+// import { useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const OtpScreen = ({navigation}) => {
+const OtpScreen = ({ navigation }) => {
   // const route = useRoute();
-  // const { userId } = route.params;
+
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [timer, setTimer] = useState(30);
+  const [hid,setHid]=useState('')
   const otpInputs = Array.from({ length: 4 }, () => useRef(null));
+  // const { hospid } = route.params; 
+
+
+  useEffect(() => {
+    async function countdown() {
+      if (timer > 0) {
+        const countdownInterval = setInterval(() => setTimer(timer - 1), 1000);
+        return () => clearInterval(countdownInterval);
+      }
+    }
+    countdown();
+  }, [timer]);
+  useEffect(() => {
+    const getHospId = async () => {
+      const hospid = await AsyncStorage.getItem("hospid");
+      setHid(hospid);
+    };
+    getHospId();
+  }, []);
 
   const handleOtpInput = (index, value) => {
     const updatedOtp = [...otp];
@@ -49,38 +71,60 @@ const OtpScreen = ({navigation}) => {
   };
 
   const handleVerifyNow = async () => {
-    // setLoading(true);
-    // const otpNumber = Number(otp.join(""));
-    // const url = "https://server.bookmyappointments.in/api/bma/verifyotp";
-    // const payload = { userid: userId, otp: otpNumber };
+    setLoading(true);
+    const otpNumber = Number(otp.join(""));
+    const url = "https://server.bookmyappointments.in/api/bma/hospital/verifyotp";
+    const payload = { hospid:hid, otp: otpNumber };
 
-    // try {
-    //   const response = await fetch(url, {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify(payload),
-    //   });
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-    //   const responseText = await response.text();
-    //   console.log("Raw response:", responseText);
+      const responseText = await response.text();
+      const responseData = JSON.parse(responseText);
 
-    //   const responseData = JSON.parse(responseText);
+      if (responseData.success) {
+        await AsyncStorage.setItem("jwtToken", responseData.jwtToken);
+        await AsyncStorage.removeItem("number");
+        navigation.replace("HomeScreen");
+      } else {
+        Alert.alert("Error", responseData.message || "Invalid response from server");
+      }
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    //   if (responseData.success) {
-    //     await AsyncStorage.setItem("jwtToken", responseData.jwtToken);
-    //     console.log(responseData.jwtToken);
-    //     navigation.navigate("HomeScreen");
-    //   } else {
-    //     Alert.alert("Error", responseData.message || "Invalid response from server");
-    //   }
-    // } catch (error) {
-    //   Alert.alert("Error", error.message);
-    // } finally {
-    //   setLoading(false);
-    // }
-    navigation.navigate("HomeScreen")
+  const handleResendOtp = async () => {
+    setResendLoading(true);
+    try {
+      const response = await fetch("https://server.bookmyappointments.in/api/bma/hospital/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ number: await AsyncStorage.getItem("number") }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        Alert.alert("Success", "OTP has been resent");
+        setTimer(30); // Reset the timer
+      } else {
+        Alert.alert("Error", data.error);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to resend OTP, please try again");
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   return (
@@ -121,6 +165,7 @@ const OtpScreen = ({navigation}) => {
           paddingVertical: 10,
           borderRadius: 5,
           width: '60%',
+          marginBottom: 20,
         }}
         onPress={handleVerifyNow}
         disabled={loading}
@@ -130,6 +175,27 @@ const OtpScreen = ({navigation}) => {
         ) : (
           <Text style={{ color: "white", alignItems: "center", fontSize: 18 }}>
             Verify Now
+          </Text>
+        )}
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={{
+          paddingHorizontal: 20,
+          alignItems: "center",
+          display: "flex",
+          justifyContent: "center",
+          paddingVertical: 10,
+          borderRadius: 5,
+          width: '60%',
+        }}
+        onPress={handleResendOtp}
+        disabled={resendLoading || timer > 0}
+      >
+        {resendLoading ? (
+          <ActivityIndicator size="small" color="#ffffff" />
+        ) : (
+          <Text style={{ color: resendLoading || timer > 0 ? "red" : "#2BB673", alignItems: "center", fontSize: 18 }}>
+            Resend OTP {timer > 0 && `(${timer}s)`}
           </Text>
         )}
       </TouchableOpacity>

@@ -1,14 +1,25 @@
 import React from "react";
-import { View, Text, StyleSheet, Image, SafeAreaView,TextInput, TouchableOpacity,FlatList, Modal } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  SafeAreaView,
+  TextInput,
+  TouchableOpacity,
+  FlatList,
+  Modal,
+} from "react-native";
 import { useState } from "react";
 import { useRoute } from "@react-navigation/native";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons } from "@expo/vector-icons";
 
 export default function DoctorPreview() {
   const route = useRoute();
   const { doctor } = route.params;
 
   const handleDeleteDoctor = () => {
+    console.log(doctor)
     // Implement your logic to delete the doctor here
   };
 
@@ -35,7 +46,6 @@ export default function DoctorPreview() {
     setModalVisible(false);
   };
 
-
   const handleInputChange = (name, value) => {
     setFormData({ ...formData, [name]: value });
   };
@@ -53,37 +63,53 @@ export default function DoctorPreview() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.imageContainer}>
-          <Image
-            source={{ uri: doctor.image }}
-            style={styles.image}
-          />
+          <Image source={{ uri: doctor.image }} style={styles.image} />
         </View>
         <View style={styles.cardContainer}>
-        
           <View style={styles.card}>
-          <TouchableOpacity 
-      style={{position: 'absolute', top: 0, right: 5, padding: 15, display: 'flex', alignItems: 'center', justifyContent: 'center'}}
-      onPress={handleEditDoctor}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Ionicons name="create-outline" size={28} color="black" />
-        <Text style={{ marginLeft: 5 }}>Edit</Text>
-      </View>
-    </TouchableOpacity>
-            <Text style={[styles.cardText, styles.boldText]}>Name: <Text style={styles.normalText}>{doctor.name}</Text></Text>
-            <Text style={[styles.cardText, styles.boldText]}>Experience: <Text style={styles.normalText}>{doctor.experience} years</Text></Text>
-            <Text style={[styles.cardText, styles.boldText]}>Study: <Text style={styles.normalText}>{doctor.study}</Text></Text>
-            <Text style={[styles.cardText, styles.boldText]}>Specialist: <Text style={styles.normalText}>{doctor.specialist}</Text></Text>
-            <Text style={[styles.cardText, styles.boldText]}>Code: <Text style={styles.normalText}>{doctor.code}</Text></Text>
-            <Text style={[styles.cardText, styles.boldText]}>Slot Timings: <Text style={styles.normalText}>{doctor.slotTimings} min</Text></Text>
-            <Text style={[styles.cardText, styles.boldText]}>No of Days: <Text style={styles.normalText}>{doctor.noOfDays}</Text></Text>
+            <TouchableOpacity
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 5,
+                padding: 15,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+              onPress={handleEditDoctor}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center" }}>
+                <Ionicons name="create-outline" size={28} color="black" />
+                <Text style={{ marginLeft: 5 }}>Edit</Text>
+              </View>
+            </TouchableOpacity>
+            <Text style={[styles.cardText, styles.boldText]}>
+              Name: <Text style={styles.normalText}>{doctor.name}</Text>
+            </Text>
+            <Text style={[styles.cardText, styles.boldText]}>
+              Study: <Text style={styles.normalText}>{doctor.study}</Text>
+            </Text>
+            <Text style={[styles.cardText, styles.boldText]}>
+              Specialist:{" "}
+              <Text style={styles.normalText}>{doctor.specialist}</Text>
+            </Text>
+            <Text style={[styles.cardText, styles.boldText]}>
+              Code: <Text style={styles.normalText}>{doctor.code}</Text>
+            </Text>
           </View>
         </View>
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={[styles.button, styles.deleteButton]} onPress={handleDeleteDoctor}>
+          <TouchableOpacity
+            style={[styles.button, styles.deleteButton]}
+            onPress={handleDeleteDoctor}
+          >
             <Text style={styles.buttonText}>Delete Doctor</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.manageButton]} onPress={handleManageSlots}>
+          <TouchableOpacity
+            style={[styles.button, styles.manageButton]}
+            onPress={handleManageSlots}
+          >
             <Text style={styles.buttonText}>Manage Slots</Text>
           </TouchableOpacity>
         </View>
@@ -98,7 +124,20 @@ export default function DoctorPreview() {
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Edit Doctor Details</Text>
             <Text>Enter one or many to edit</Text>
-          <Text style={{position:'absolute',top:0,right:0,padding:20,color:'red'}} onPress={()=>{setModalVisible(false)}}>Exit</Text>
+            <Text
+              style={{
+                position: "absolute",
+                top: 0,
+                right: 0,
+                padding: 20,
+                color: "red",
+              }}
+              onPress={() => {
+                setModalVisible(false);
+              }}
+            >
+              Exit
+            </Text>
             <FlatList
               data={fields}
               keyExtractor={(item) => item.name}
@@ -114,7 +153,10 @@ export default function DoctorPreview() {
                 </View>
               )}
             />
-            <TouchableOpacity style={[styles.button, styles.modalButton]} onPress={DoneButton}>
+            <TouchableOpacity
+              style={[styles.button, styles.modalButton]}
+              onPress={DoneButton}
+            >
               <Text style={styles.buttonText}>Edit</Text>
             </TouchableOpacity>
           </View>
@@ -136,8 +178,8 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     alignItems: "center",
-    height:0,
-    marginTop:10
+    height: 0,
+    marginTop: 10,
     // marginBottom: 20,
   },
   image: {
@@ -194,7 +236,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
     backgroundColor: "white",
@@ -206,7 +248,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "bold",
     marginBottom: 10,
-  }, modalButton: {
+  },
+  modalButton: {
     backgroundColor: "#2BB673",
     marginTop: 20,
   },

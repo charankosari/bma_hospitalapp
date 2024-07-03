@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useRoute } from "@react-navigation/native";
-import Default from "../../assets/default.jpg";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 const SettingsScreen = ({ navigation }) => {
   const [profileImage, setProfileImage] = useState(null);
@@ -38,7 +37,7 @@ const SettingsScreen = ({ navigation }) => {
 
   const handleSignOut = () => {
     AsyncStorage.removeItem("jwtToken");
-    navigation.push("Login");
+    navigation.replace("Login");
   };
 
   return (

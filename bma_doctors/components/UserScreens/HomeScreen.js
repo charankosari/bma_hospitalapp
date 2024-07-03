@@ -22,6 +22,7 @@ export default function App({ navigation }) {
       code: "CIADIR",
       slotTimings: 30,
       noOfDays: 7,
+      date: "2024-05-20",
     },
     {
       image:
@@ -34,6 +35,7 @@ export default function App({ navigation }) {
       code: "NEURODOC",
       slotTimings: 45,
       noOfDays: 5,
+      date: "2024-05-20",
     },
     {
       image:
@@ -46,6 +48,7 @@ export default function App({ navigation }) {
       code: "ORTHOEXP",
       slotTimings: 30,
       noOfDays: 7,
+      date: "2024-05-20",
     },
     {
       image:
@@ -58,6 +61,7 @@ export default function App({ navigation }) {
       code: "GENSURG",
       slotTimings: 40,
       noOfDays: 6,
+      date: "2024-05-20",
     },
     {
       image:
@@ -70,6 +74,7 @@ export default function App({ navigation }) {
       code: "PEDIDOC",
       slotTimings: 30,
       noOfDays: 7,
+      date: "2024-05-20",
     },
     {
       image:
@@ -82,6 +87,7 @@ export default function App({ navigation }) {
       code: "ONCODR",
       slotTimings: 45,
       noOfDays: 5,
+      date: "2024-05-20",
     },
     {
       image:
@@ -94,6 +100,7 @@ export default function App({ navigation }) {
       code: "DERMDOC",
       slotTimings: 35,
       noOfDays: 6,
+      date: "2024-05-20",
     },
     {
       image:
@@ -106,6 +113,7 @@ export default function App({ navigation }) {
       code: "URODR",
       slotTimings: 30,
       noOfDays: 7,
+      date: "2024-05-20",
     },
     {
       image:
@@ -118,6 +126,7 @@ export default function App({ navigation }) {
       code: "ENDODOC",
       slotTimings: 40,
       noOfDays: 6,
+      date: "2024-05-20",
     },
     {
       image:
@@ -130,6 +139,7 @@ export default function App({ navigation }) {
       code: "GASTRODR",
       slotTimings: 30,
       noOfDays: 7,
+      date: "2024-05-20",
     },
   ];
 
@@ -184,7 +194,7 @@ export default function App({ navigation }) {
           <Text style={{ fontSize: 16, color: "gray" }}>
             {doctor.specialist}
           </Text>
-        
+
           <Text style={{ fontSize: 16, color: "gray" }}>{doctor.areaName}</Text>
         </View>
       </View>
@@ -260,7 +270,7 @@ export default function App({ navigation }) {
           alignItems: "center",
         }}
         onPress={() => {
-          navigation.navigate("Add doctor")
+          navigation.navigate("Add doctor");
         }}
       >
         <AntDesign name="plus" size={24} color="#fff" />

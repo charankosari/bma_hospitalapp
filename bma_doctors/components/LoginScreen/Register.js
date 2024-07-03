@@ -1,299 +1,476 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
-  KeyboardAvoidingView,
+  ScrollView,
   TextInput,
   Text,
-  TouchableWithoutFeedback,
   TouchableOpacity,
   Keyboard,
-  Platform,
   Alert,
   ActivityIndicator,
+  TouchableWithoutFeedback,
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as Location from "expo-location";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { WebView } from "react-native-webview";
+
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [city, setCity] = useState("");
+  const [latitude, setLatitude] = useState(null);
+  const [longitude, setLongitude] = useState(null);
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState(null);
-  const [selectedItem, setSelectedItem] = useState("hospital");
+  const [selectedItem, setSelectedItem] = useState("");
+  const [successAlert, setSuccessAlert] = useState(false);
+  const [keyboardSpace, setKeyboardSpace] = useState(0);
+  const [currentStep, setCurrentStep] = useState(1);
 
-  const handleRegister = async () => {
-    if (!name || !email || !phoneNumber) {
-      Alert.alert("Error", "Please fill in all fields");
-      return;
+  useEffect(() => {
+    const getLocation = async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission to access location was denied");
+        return;
+      }
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLatitude(location.coords.latitude);
+      setLongitude(location.coords.longitude);
+    };
+
+    getLocation();
+  }, []);
+
+  const handleNextStep = () => {
+    if (currentStep === 1) {
+      if (!name || !email || !phoneNumber || !selectedItem) {
+        Alert.alert("Error", "Please fill in all fields");
+        return;
+      }
+    } else if (currentStep === 2) {
+      if (!address || !pincode || !city) {
+        Alert.alert("Error", "Please fill in all fields");
+        return;
+      }
     }
-
-    // setLoading(true);
-
-    // try {
-    //   const response = await fetch("https://server.bookmyappointments.in/api/bma/register", {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify({ name, email, number: phoneNumber }),
-    //   });
-
-    //   const data = await response.json();
-
-    //   if (response.status === 200) {
-    //     navigation.navigate("Otp", { number: data.number });
-    //   } else {
-    //     console.log(data)
-    //     Alert.alert("Error", data.error || "Registration failed");
-    //   }
-    // } catch (error) {
-    //   Alert.alert("Error", "Failed to register, please try again");
-    // } finally {
-    //   setLoading(false);
-    // }
-    navigation.replace("Otp");
+    setCurrentStep(currentStep + 1);
   };
+
+  const handlePrevStep = () => {
+    setCurrentStep(currentStep - 1);
+  };
+  const handleRegister = async () => {
+    setLoading(true);
+    let imageUrl = "";
+    try {
+      if (image) {
+        const formData = new FormData();
+        formData.append("file", {
+          uri: image.assets[0].uri,
+          name: image.assets[0].fileName,
+          type: image.assets[0].mimeType,
+        });
+  
+        const jwtToken = await AsyncStorage.getItem("jwtToken");
+        const response = await fetch(
+          "https://server.bookmyappointments.in/api/bma/hospital/profileupload",
+          {
+            method: "POST",
+            body: formData,
+            headers: {
+              "Content-Type": "multipart/form-data",
+              Authorization: `Bearer ${jwtToken}`,
+            },
+          }
+        );
+  
+        const data = await response.json();
+        console.log("Image upload response:", data);
+  
+        if (response.status !== 200) {
+          throw new Error(data.error || "Failed to upload image");
+        }
+  
+        imageUrl = data.url;
+        console.log("Image URL:", imageUrl);
+      }
+  
+      const body = {
+        hospitalName: name,
+        address: {
+          hospitalAddress: address,
+          pincode,
+          city,
+          latitude,
+          longitude,
+        },
+        number: phoneNumber,
+        email,
+        role: selectedItem === "hospitals" ? "hospital" : "lab",
+        image: imageUrl,
+      };
+  
+      console.log("Sending registration data:", body);
+  
+      const response = await fetch(
+        "https://server.bookmyappointments.in/api/bma/hospital/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        }
+      );
+  
+      const data = await response.json();
+      console.log("Registration response:", data);
+  
+      if (response.status === 200) {
+        setSuccessAlert(true);
+        setTimeout(() => {
+          navigation.navigate("Otp", { data: body });
+        }, 1000);
+      } else {
+        Alert.alert("Error", data.error || "Registration failed");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      Alert.alert("Error", error.message || "Failed to register, please try again");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+
   const pickImage = async () => {
-    // Ask the user for the permission to access media library
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
       alert("Sorry, we need camera roll permissions to make this work!");
       return;
     }
 
-    // Launch the image picker
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
       quality: 1,
     });
 
     if (!result.canceled) {
-      console.log(result.uri); // Log the image URI to the console
+      setImage(result);
+      console.log(result);
     }
   };
 
+  const handleMessage = (event) => {
+    const { data } = event.nativeEvent;
+    const coordinates = JSON.parse(data);
+    setLatitude(coordinates.latitude);
+    setLongitude(coordinates.longitude);
+  };
+
+  const mapHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Select Location</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        #map {
+          height: 100%;
+        }
+        html, body {
+          height: 100%;
+          margin: 0;
+          padding: 0;
+        }
+      </style>
+      <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    </head>
+    <body>
+      <div id="map"></div>
+      <script>
+        var map = L.map('map').setView([${latitude || 37.78825}, ${longitude || -122.4324}], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        var marker = L.marker([${latitude || 37.78825}, ${longitude || -122.4324}], { draggable: true }).addTo(map);
+        
+        marker.on('dragend', function(event) {
+          var position = marker.getLatLng();
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            latitude: position.lat,
+            longitude: position.lng
+          }));
+        });
+      </script>
+    </body>
+    </html>
+  `;
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: "#ffffff",
-      }}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View
-          style={{
-            flex: 1,
+    <View style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.select({ ios: 0, android: 500 })}
+      >
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
             justifyContent: "center",
             alignItems: "center",
-            width: "80%",
           }}
+          keyboardShouldPersistTaps="handled"
         >
-          <Text style={{ fontSize: 36, marginBottom: 24 }}>Register </Text>
-          <View style={{ width: "100%", marginBottom: 24 }}>
-            <TextInput
-              placeholder="Hospital name or Lab name"
-              style={{
-                height: 40,
-                borderColor: "#ccc",
-                borderBottomWidth: 1,
-                marginBottom: 12,
-                paddingHorizontal: 8,
-                fontSize: 16,
-              }}
-              value={name}
-              onChangeText={setName}
-              editable={!loading}
-            />
-
-            <TextInput
-              placeholder="Email"
-              style={{
-                height: 40,
-                borderColor: "#ccc",
-                borderBottomWidth: 1,
-                marginBottom: 12,
-                paddingHorizontal: 8,
-                fontSize: 16,
-              }}
-              value={email}
-              onChangeText={setEmail}
-              editable={!loading}
-            />
-            <TextInput
-              placeholder="Address"
-              style={{
-                height: 40,
-                borderColor: "#ccc",
-                borderBottomWidth: 1,
-                marginBottom: 12,
-                paddingHorizontal: 8,
-                fontSize: 16,
-              }}
-              value={address}
-              onChangeText={setAddress}
-              editable={!loading}
-            />
-            <TextInput
-              placeholder="Phone Number"
-              keyboardType="phone-pad"
-              style={{
-                height: 40,
-                borderColor: "#ccc",
-                borderBottomWidth: 1,
-                marginBottom: 12,
-                paddingHorizontal: 8,
-                fontSize: 16,
-              }}
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              editable={!loading}
-            />
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                paddingVertical: 10,
-              }}
-            >
-              <Text style={{ flex: 1, fontSize: 16, marginRight: 10 }}>
-                Select:
-              </Text>
-              <View
-                style={{ display: "flex", flexDirection: "row", width: "70%" }}
-              >
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    borderRadius: 10,
-                    borderBottomWidth: 1,
-                    borderTopWidth: 1,
-                    borderColor: "#ccc",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    paddingVertical: 7,
-                    borderLeftWidth: 1,
-                    backgroundColor:
-                      selectedItem === "hospitals" ? "#2BB673" : "transparent",
-                    borderTopRightRadius: selectedItem === "hospitals" ? 0 : 10,
-                    borderBottomRightRadius:
-                      selectedItem === "hospitals" ? 0 : 10,
-                  }}
-                  onPress={() => setSelectedItem("hospitals")}
-                >
-                  <Text
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={{ width: Dimensions.get("window").width * 0.8 }}>
+              <Text style={{ fontSize: 36, marginBottom: 24 }}>REGISTER</Text>
+              {currentStep === 1 && (
+                <View>
+                  <TextInput
+                    placeholder="Hospital name or Lab name"
                     style={{
+                      height: 40,
+                      borderColor: "#ccc",
+                      borderBottomWidth: 1,
+                      marginBottom: 12,
+                      paddingHorizontal: 8,
                       fontSize: 16,
-                      fontWeight: "500",
-                      color: selectedItem === "hospitals" ? "#fff" : "#000",
+                    }}
+                    value={name}
+                    onChangeText={setName}
+                    editable={!loading}
+                  />
+                  <TextInput
+                    placeholder="Email"
+                    style={{
+                      height: 40,
+                      borderColor: "#ccc",
+                      borderBottomWidth: 1,
+                      marginBottom: 12,
+                      paddingHorizontal: 8,
+                      fontSize: 16,
+                    }}
+                    value={email}
+                    onChangeText={setEmail}
+                    editable={!loading}
+                  />
+                  <TextInput
+                    placeholder="Phone Number"
+                    keyboardType="phone-pad"
+                    style={{
+                      height: 40,
+                      borderColor: "#ccc",
+                      borderBottomWidth: 1,
+                      marginBottom: 12,
+                      paddingHorizontal: 8,
+                      fontSize: 16,
+                    }}
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                    editable={!loading}
+                  />
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      marginBottom: 12,
                     }}
                   >
-                    Hospitals
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={{
-                    flex: 1,
-                    borderRadius: 10,
-                    borderBottomWidth: 1,
-                    borderTopWidth: 1,
-                    borderColor: "#ccc",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    paddingVertical: 7,
-                    borderRightWidth: 1,
-                    backgroundColor:
-                      selectedItem === "labs" ? "#2BB673" : "transparent",
-                    borderTopLeftRadius: selectedItem === "labs" ? 0 : 10,
-                    borderBottomLeftRadius: selectedItem === "labs" ? 0 : 10,
-                  }}
-                  onPress={() => setSelectedItem("labs")}
-                >
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      fontWeight: "500",
-                      color: selectedItem === "labs" ? "#fff" : "#000",
-                    }}
-                  >
-                    Labs
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginTop: 5,
-                marginBottom: 10,
-              }}
-            >
-              <Text style={{ fontSize: 16, marginRight: 40 }}>
-                Upload Profile
-                <Text style={{ fontSize: 14, color: "gray", marginLeft: 1 }}>
-                  (Optional) :
-                </Text>
-              </Text>
-
-              <TouchableOpacity
-                style={{
-                  backgroundColor: "#007BFF",
-                  padding: 10,
-                  borderRadius: 5,
-                  marginLeft: 30,
-                }}
-                onPress={pickImage}
-              >
-                <Text style={{ color: "#fff" }}>Upload</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              onPress={handleRegister}
-              style={{
-                backgroundColor: loading ? "#ccc" : "#4CAF50",
-                paddingVertical: 12,
-                paddingHorizontal: 12,
-                borderRadius: 4,
-                alignItems: "center",
-              }}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Text
-                  style={{ color: "#ffffff", fontSize: 16, fontWeight: "bold" }}
-                >
-                  Send OTP
-                </Text>
+                    <TouchableOpacity
+                      onPress={() => setSelectedItem("hospitals")}
+                      style={{
+                        flex: 1,
+                        padding: 10,
+                        backgroundColor: selectedItem === "hospitals" ? "#2BB673" : "#ccc",
+                        borderRadius: 5,
+                        alignItems: "center",
+                        marginRight: 10,
+                      }}
+                      disabled={loading}
+                    >
+                      <Text style={{ color: "white" }}>Hospital</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setSelectedItem("labs")}
+                      style={{
+                        flex: 1,
+                        padding: 10,
+                        backgroundColor: selectedItem === "labs" ? "#2BB673" : "#ccc",
+                        borderRadius: 5,
+                        alignItems: "center",
+                      }}
+                      disabled={loading}
+                    >
+                      <Text style={{ color: "white" }}>Lab</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <TouchableOpacity onPress={handleNextStep} disabled={loading}>
+                    <View
+                      style={{
+                        backgroundColor: "#2BB673",
+                        padding: 10,
+                        borderRadius: 5,
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text style={{ color: "white", fontSize: 16 }}>Next</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
               )}
-            </TouchableOpacity>
-            <Text
-              style={{
-                marginTop: 24,
-                fontSize: 16,
-                marginBottom: 24,
-                textAlign: "center",
-              }}
-            >
-              Already have an account?{" "}
-              <Text
-                onPress={() => navigation.push("Login")}
-                style={{ color: "#4CAF50", textDecorationLine: "underline" }}
-              >
-                Sign In
-              </Text>
-            </Text>
-          </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+              {currentStep === 2 && (
+                <View>
+                  <TextInput
+                    placeholder="Address"
+                    style={{
+                      height: 40,
+                      borderColor: "#ccc",
+                      borderBottomWidth: 1,
+                      marginBottom: 12,
+                      paddingHorizontal: 8,
+                      fontSize: 16,
+                    }}
+                    value={address}
+                    onChangeText={setAddress}
+                    editable={!loading}
+                  />
+                  <TextInput
+                    placeholder="Pincode"
+                    style={{
+                      height: 40,
+                      borderColor: "#ccc",
+                      borderBottomWidth: 1,
+                      marginBottom: 12,
+                      paddingHorizontal: 8,
+                      fontSize: 16,
+                    }}
+                    value={pincode}
+                    onChangeText={setPincode}
+                    editable={!loading}
+                  />
+                  <TextInput
+                    placeholder="City"
+                    style={{
+                      height: 40,
+                      borderColor: "#ccc",
+                      borderBottomWidth: 1,
+                      marginBottom: 12,
+                      paddingHorizontal: 8,
+                      fontSize: 16,
+                    }}
+                    value={city}
+                    onChangeText={setCity}
+                    editable={!loading}
+                  />
+                  <TouchableOpacity onPress={handlePrevStep} disabled={loading}>
+                    <View
+                      style={{
+                        backgroundColor: "#6c757d",
+                        padding: 10,
+                        borderRadius: 5,
+                        alignItems: "center",
+                        marginBottom: 10,
+                      }}
+                    >
+                      <Text style={{ color: "white", fontSize: 16 }}>Back</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleNextStep} disabled={loading}>
+                    <View
+                      style={{
+                        backgroundColor: "#2BB673",
+                        padding: 10,
+                        borderRadius: 5,
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text style={{ color: "white", fontSize: 16 }}>Next</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {currentStep === 3 && (
+                <View>
+                  <View style={{ height: 300, marginBottom: 12 }}>
+                    <WebView
+                      originWhitelist={["*"]}
+                      source={{ html: mapHtml }}
+                      onMessage={handleMessage}
+                    />
+                  </View>
+                  <TouchableOpacity onPress={handlePrevStep} disabled={loading}>
+                    <View
+                      style={{
+                        backgroundColor: "#6c757d",
+                        padding: 10,
+                        borderRadius: 5,
+                        alignItems: "center",
+                        marginBottom: 10,
+                      }}
+                    >
+                      <Text style={{ color: "white", fontSize: 16 }}>Back</Text>
+                    </View>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleRegister} disabled={loading}>
+                    <View
+                      style={{
+                        backgroundColor: "#2BB673",
+                        padding: 10,
+                        borderRadius: 5,
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text style={{ color: "white", fontSize: 16 }}>Register</Text>
+                    </View>
+                  </TouchableOpacity>
+                  {loading && <ActivityIndicator size="large" color="#007bff" />}
+                  <TouchableOpacity onPress={pickImage} disabled={loading}>
+                    <View
+                      style={{
+                        backgroundColor: "#2BB673",
+                        padding: 10,
+                        borderRadius: 5,
+                        alignItems: "center",
+                        marginTop: 10,
+                      }}
+                    >
+                      <Text style={{ color: "white", fontSize: 16 }}>
+                        {image ? "Change Image" : "Upload Image"}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                  {image && (
+                    <Image
+                      source={{ uri: image.uri }}
+                      style={{
+                        width: 100,
+                        height: 100,
+                        borderRadius: 5,
+                        marginTop: 10,
+                      }}
+                    />
+                  )}
+                </View>
+              )}
+            </View>
+          </TouchableWithoutFeedback>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 

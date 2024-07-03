@@ -17,46 +17,49 @@ const KeyboardAwareScrollViewComponent = ({ navigation }) => {
   const [mobileNumber, setMobileNumber] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // useEffect(() => {
-  //   const checkToken = async () => {
-  //     try {
-  //       const jwtToken = await AsyncStorage.getItem("jwtToken");
-  //       console.log("JWT Token:", jwtToken);
-  //       if (jwtToken) {
-  //         navigation.push("HomeScreen");
-  //       }
-  //     } catch (error) {
-  //       console.error("Error retrieving JWT token:", error);
-  //     }
-  //   };
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const jwtToken = await AsyncStorage.getItem("jwtToken");
+        console.log("JWT Token:", jwtToken);
+        if (jwtToken) {
+          navigation.replace("HomeScreen");
+        }
+      } catch (error) {
+        console.error("Error retrieving JWT token:", error);
+      }
+    };
 
-  //   checkToken();
-  // }, [navigation]);
+    checkToken();
+  }, [navigation]);
 
   const handleSendOtp = async () => {
-    // setLoading(true);
-    // try {
-    //   const response = await fetch("https://server.bookmyappointments.in/api/bma/login", {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify({ number: mobileNumber }),
-    //   });
+    setLoading(true);
+    try {
+      const response = await fetch("https://server.bookmyappointments.in/api/bma/hospital/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ number: mobileNumber }),
+      });
 
-    //   const data = await response.json();
-    //   if (response.ok) {
-    //     const userId = data.userid;
-    //     navigation.navigate("OtpLogin", { userId });
-    //   } else {
-    //     Alert.alert("Error", data.error);
-    //   }
-    // } catch (error) {
-    //   Alert.alert("Error", "Failed to send OTP, please try again");
-    // } finally {
-    //   setLoading(false);
-    // }
-    navigation.navigate("OtpLogin")
+      const data = await response.json();
+      if (response.ok) {
+        const hospid = data.hospid; 
+        console.log(hospid);
+        await AsyncStorage.setItem("number", mobileNumber);
+        await AsyncStorage.setItem("hospid", hospid);
+    navigation.replace("OtpLogin")
+
+      } else {
+        Alert.alert("Error", data.error);
+      }
+    } catch (error) {
+      Alert.alert("Error", "Failed to send OTP, please try again");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {

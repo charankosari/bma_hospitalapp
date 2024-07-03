@@ -11,8 +11,8 @@ import {  useRoute } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const OtpScreen = ({navigation}) => {
-  // const route = useRoute();
-  // const { number } = route.params;
+  const route = useRoute();
+  const { data } = route.params;
   const [otp, setOtp] = useState(["", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const otpInputs = Array.from({ length: 4 }, () => useRef(null));
@@ -47,41 +47,43 @@ const OtpScreen = ({navigation}) => {
       setOtp(updatedOtp);
     }
   };
-
   const handleVerifyNow = async () => {
-    // setLoading(true);
-    // const otpNumber = Number(otp.join(""));
-    // const url = "https://server.bookmyappointments.in/api/bma/verifyregisterotp";
-    // const payload = { number, otp: otpNumber };
-
-    // try {
-    //   const response = await fetch(url, {
-    //     method: "POST",
-    //     headers: {
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify(payload),
-    //   });
-
-    //   const responseText = await response.text();
-    //   console.log("Raw response:", responseText);
-
-    //   const responseData = JSON.parse(responseText);
-
-    //   if (responseData.success) {
-    //     await AsyncStorage.setItem("jwtToken", responseData.jwtToken);
-    //     console.log(responseData.jwtToken);
-    //     navigation.push("HomeScreen");
-    //   } else {
-    //     Alert.alert("Error", responseData.message || "Invalid response from server");
-    //   }
-    // } catch (error) {
-    //   Alert.alert("Error", error.message);
-    // } finally {
-    //   setLoading(false);
-    // }
-    navigation.replace('HomeScreen')
+    setLoading(true);
+  
+    // Convert the OTP array to a number
+    const otpNumber = Number(otp.join(""));
+  
+    // Prepare the payload with data and otpNumber
+    const payload = { data, otp: otpNumber };
+  
+    const url = "https://server.bookmyappointments.in/api/bma/hospital/verifyregisterotp";
+  
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+  
+      const responseData = await response.json();
+      console.log("Verification response:", responseData);
+  
+      if (responseData.success) {
+        await AsyncStorage.setItem("jwtToken", responseData.jwtToken);
+        console.log("JWT Token:", responseData.jwtToken);
+        navigation.replace("HomeScreen");
+      } else {
+        Alert.alert("Error", responseData.message || "Invalid response from server");
+      }
+    } catch (error) {
+      Alert.alert("Error", error.message || "Failed to verify OTP");
+    } finally {
+      setLoading(false);
+    }
   };
+  
 
   return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
