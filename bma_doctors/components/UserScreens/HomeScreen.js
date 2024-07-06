@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,165 +7,72 @@ import {
   TouchableOpacity,
   FlatList,
   SafeAreaView,
+  ActivityIndicator,
+  Alert,
 } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function App({ navigation }) {
-  const doctors = [
-    {
-      image:
-        "https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg?w=740&t=st=1717738859~exp=1717739459~hmac=d3b4d848c141787aeb233b76ae88543af1f94b3e405cc433f684f4d9aa7bc944",
-      name: "Dr. Charan Kosari",
-      experience: 10,
-      study: "MBBS, MD",
-      specialist: "Cardiology",
-      code: "CIADIR",
-      slotTimings: 30,
-      noOfDays: 7,
-      date: "2024-05-20",
-    },
-    {
-      image:
-        "https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg?w=740&t=st=1717738859~exp=1717739459~hmac=d3b4d848c141787aeb233b76ae88543af1f94b3e405cc433f684f4d9aa7bc944",
-
-      name: "Dr. John Doe",
-      experience: 15,
-      study: "MBBS, PhD",
-      specialist: "Neurology",
-      code: "NEURODOC",
-      slotTimings: 45,
-      noOfDays: 5,
-      date: "2024-05-20",
-    },
-    {
-      image:
-        "https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg?w=740&t=st=1717738859~exp=1717739459~hmac=d3b4d848c141787aeb233b76ae88543af1f94b3e405cc433f684f4d9aa7bc944",
-
-      name: "Dr. Jane Smith",
-      experience: 8,
-      study: "MBBS, MS",
-      specialist: "Orthopedics",
-      code: "ORTHOEXP",
-      slotTimings: 30,
-      noOfDays: 7,
-      date: "2024-05-20",
-    },
-    {
-      image:
-        "https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg?w=740&t=st=1717738859~exp=1717739459~hmac=d3b4d848c141787aeb233b76ae88543af1f94b3e405cc433f684f4d9aa7bc944",
-
-      name: "Dr. Michael Brown",
-      experience: 12,
-      study: "MBBS, MCh",
-      specialist: "General Surgery",
-      code: "GENSURG",
-      slotTimings: 40,
-      noOfDays: 6,
-      date: "2024-05-20",
-    },
-    {
-      image:
-        "https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg?w=740&t=st=1717738859~exp=1717739459~hmac=d3b4d848c141787aeb233b76ae88543af1f94b3e405cc433f684f4d9aa7bc944",
-
-      name: "Dr. Emily Rodriguez",
-      experience: 6,
-      study: "MBBS, DNB",
-      specialist: "Pediatrics",
-      code: "PEDIDOC",
-      slotTimings: 30,
-      noOfDays: 7,
-      date: "2024-05-20",
-    },
-    {
-      image:
-        "https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg?w=740&t=st=1717738859~exp=1717739459~hmac=d3b4d848c141787aeb233b76ae88543af1f94b3e405cc433f684f4d9aa7bc944",
-
-      name: "Dr. Alexander Lee",
-      experience: 20,
-      study: "MBBS, MS",
-      specialist: "Oncology",
-      code: "ONCODR",
-      slotTimings: 45,
-      noOfDays: 5,
-      date: "2024-05-20",
-    },
-    {
-      image:
-        "https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg?w=740&t=st=1717738859~exp=1717739459~hmac=d3b4d848c141787aeb233b76ae88543af1f94b3e405cc433f684f4d9aa7bc944",
-
-      name: "Dr. Olivia Garcia",
-      experience: 18,
-      study: "MBBS, MD",
-      specialist: "Dermatology",
-      code: "DERMDOC",
-      slotTimings: 35,
-      noOfDays: 6,
-      date: "2024-05-20",
-    },
-    {
-      image:
-        "https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg?w=740&t=st=1717738859~exp=1717739459~hmac=d3b4d848c141787aeb233b76ae88543af1f94b3e405cc433f684f4d9aa7bc944",
-
-      name: "Dr. Benjamin Martinez",
-      experience: 9,
-      study: "MBBS, MS",
-      specialist: "Urology",
-      code: "URODR",
-      slotTimings: 30,
-      noOfDays: 7,
-      date: "2024-05-20",
-    },
-    {
-      image:
-        "https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg?w=740&t=st=1717738859~exp=1717739459~hmac=d3b4d848c141787aeb233b76ae88543af1f94b3e405cc433f684f4d9aa7bc944",
-
-      name: "Dr. Sophia Clark",
-      experience: 14,
-      study: "MBBS, MD",
-      specialist: "Endocrinology",
-      code: "ENDODOC",
-      slotTimings: 40,
-      noOfDays: 6,
-      date: "2024-05-20",
-    },
-    {
-      image:
-        "https://img.freepik.com/free-photo/doctor-with-his-arms-crossed-white-background_1368-5790.jpg?w=740&t=st=1717738859~exp=1717739459~hmac=d3b4d848c141787aeb233b76ae88543af1f94b3e405cc433f684f4d9aa7bc944",
-
-      name: "Dr. William Turner",
-      experience: 7,
-      study: "MBBS, MD",
-      specialist: "Gastroenterology",
-      code: "GASTRODR",
-      slotTimings: 30,
-      noOfDays: 7,
-      date: "2024-05-20",
-    },
-  ];
-
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredDoctors, setFilteredDoctors] = useState(doctors);
+  const [filteredDoctors, setFilteredDoctors] = useState([]);
+  const [allDoctors, setAllDoctors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleSearch = (text) => {
-    setSearchQuery(text);
-    if (text.trim() === "") {
-      setFilteredDoctors(doctors);
-    } else {
-      const filtered = doctors.filter(
-        (doctor) =>
-          doctor.name.toLowerCase().includes(text.toLowerCase()) ||
-          doctor.study.toLowerCase().includes(text.toLowerCase()) ||
-          doctor.code.toLowerCase().includes(text.toLowerCase()) ||
-          doctor.specialist.toLowerCase().includes(text.toLowerCase())
-      );
-      setFilteredDoctors(filtered);
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const hospitalId = await AsyncStorage.getItem("hospitalId");
+      const url = `https://server.bookmyappointments.in/api/bma/user/doctors/${hospitalId}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setAllDoctors(data.hospital.doctors);
+        setFilteredDoctors(data.hospital.doctors); // Initially set all doctors
+        setError(null); // Clear any previous errors
+      } else {
+        setError(data.message || "Failed to fetch doctors");
+      }
+    } catch (error) {
+      setError(error.message || "Failed to fetch doctors");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSearchSubmit = () => {
-    console.log("Search Query:", searchQuery);
-  };
+  useEffect(() => {
+    fetchData();
+  }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchData(); // Refetch data when screen gains focus
+    }, [])
+  );
+  const handleSearch = (text) => {
+    setSearchQuery(text);
+    if (text.trim() === "") {
+      setFilteredDoctors(allDoctors); // Reset to all doctors if search query is empty
+    } else {
+      const filtered = allDoctors.filter((doctor) => {
+        const name = doctor.name ? doctor.name.toLowerCase() : "";
+        const study = doctor.study ? doctor.study.toLowerCase() : "";
+        const code = doctor.code ? doctor.code.toLowerCase() : "";
+        const specialist = doctor.specialist ? doctor.specialist.toLowerCase() : "";
+  
+        return (
+          name.includes(text.toLowerCase()) ||
+          study.includes(text.toLowerCase()) ||
+          code.includes(text.toLowerCase()) ||
+          specialist.includes(text.toLowerCase())
+        );
+      });
+      setFilteredDoctors(filtered);
+    }
+  };
   const DoctorContainer = ({ doctor }) => (
     <TouchableOpacity
       onPress={() => {
@@ -194,13 +101,25 @@ export default function App({ navigation }) {
           <Text style={{ fontSize: 16, color: "gray" }}>
             {doctor.specialist}
           </Text>
-
-          <Text style={{ fontSize: 16, color: "gray" }}>{doctor.areaName}</Text>
+          <Text style={{ fontSize: 16, color: "gray" }}>{doctor.study}</Text>
         </View>
       </View>
     </TouchableOpacity>
   );
-
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" color="#2BB673" />
+      </View>
+    );
+  }
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>An error occurred: {error}</Text>
+      </View>
+    );
+  }
   return (
     <View
       style={{
@@ -213,50 +132,45 @@ export default function App({ navigation }) {
       <SafeAreaView>
         <View
           style={{
-            display: "flex",
-            flexDirection: "column",
-            width: "100%",
-            gap: 10,
+            flexDirection: "row",
+            alignItems: "center",
+            borderWidth: 1,
+            borderColor: "#ccc",
+            borderRadius: 10,
+            paddingHorizontal: 10,
+            marginHorizontal: 10,
+            marginBottom: 10,
           }}
         >
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              borderWidth: 1,
-              borderColor: "#ccc",
-              borderRadius: 10,
-              paddingHorizontal: 10,
-              marginLeft: 10,
-              marginRight: 10,
-              marginBottom: 10,
-            }}
-          >
-            <TextInput
-              style={{ flex: 1, paddingVertical: 10 }}
-              placeholder="Search"
-              onChangeText={handleSearch}
-              value={searchQuery}
+          <TextInput
+            style={{ flex: 1, paddingVertical: 10 }}
+            placeholder="Search"
+            onChangeText={handleSearch}
+            value={searchQuery}
+          />
+          <TouchableOpacity onPress={() => handleSearch(searchQuery)}>
+            <AntDesign
+              style={{ marginRight: 10 }}
+              name="search1"
+              size={20}
+              color="#888"
             />
-            <TouchableOpacity onPress={handleSearchSubmit}>
-              <AntDesign
-                style={{ marginRight: 10 }}
-                name="search1"
-                size={20}
-                color="#888"
-              />
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
-      <FlatList
-        data={filteredDoctors}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <DoctorContainer key={item.doctorName} doctor={item} />
-        )}
-      />
+      {filteredDoctors.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+          <Text>No doctors found</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredDoctors}
+          keyExtractor={(item) => item._id}
+          renderItem={({ item }) => <DoctorContainer doctor={item} />}
+        />
+      )}
+
       <TouchableOpacity
         style={{
           position: "absolute",

@@ -13,6 +13,7 @@ import Accountdetails from './components/SettingsScreens/Accountdetails'
 import HelpSupport from './components/SettingsScreens/HelpSupport'
 import DoctorPreview from "./components/DoctorScreens/DoctorPreview";
 import AddDoctors from "./components/DoctorScreens/AddDoctors";
+import MyBookings from "./components/Bookings";
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -65,7 +66,6 @@ export default function App() {
         <Stack.Screen
           name="Account Details"
           component={Accountdetails}
-          options={{ headerShown: false }}
         />
         <Stack.Screen
           name="Help and Support"
@@ -80,6 +80,11 @@ export default function App() {
         <Stack.Screen
           name="Add doctor"
           component={AddDoctors}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="MyBookings"
+          component={MyBookings}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

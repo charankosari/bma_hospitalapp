@@ -50,15 +50,21 @@ const OtpScreen = ({navigation}) => {
   const handleVerifyNow = async () => {
     setLoading(true);
   
-    // Convert the OTP array to a number
     const otpNumber = Number(otp.join(""));
-  
-    // Prepare the payload with data and otpNumber
-    const payload = { data, otp: otpNumber };
+    const payload = {
+      otp: otpNumber,
+      number: data.number,
+      hospitalName: data.hospitalName,
+      address: data.address,
+      email: data.email,
+      image: data.image,
+      role: data.role
+    };
   
     const url = "https://server.bookmyappointments.in/api/bma/hospital/verifyregisterotp";
-  
     try {
+      console.log(JSON.stringify(payload));
+      
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -66,16 +72,16 @@ const OtpScreen = ({navigation}) => {
         },
         body: JSON.stringify(payload),
       });
-  
       const responseData = await response.json();
       console.log("Verification response:", responseData);
-  
       if (responseData.success) {
         await AsyncStorage.setItem("jwtToken", responseData.jwtToken);
+        await AsyncStorage.setItem("hospitalId", responseData.hosp._id);
         console.log("JWT Token:", responseData.jwtToken);
+        console.log("Hospital ID:", responseData.hosp._id);
         navigation.replace("HomeScreen");
       } else {
-        Alert.alert("Error", responseData.message || "Invalid response from server");
+        Alert.alert("Error", responseData.error || "Invalid response from server");
       }
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to verify OTP");
@@ -84,7 +90,6 @@ const OtpScreen = ({navigation}) => {
     }
   };
   
-
   return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
       <Text style={{ fontSize: 18, marginBottom: 20 }}>

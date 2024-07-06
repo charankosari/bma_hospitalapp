@@ -23,7 +23,19 @@ const KeyboardAwareScrollViewComponent = ({ navigation }) => {
         const jwtToken = await AsyncStorage.getItem("jwtToken");
         console.log("JWT Token:", jwtToken);
         if (jwtToken) {
-          navigation.replace("HomeScreen");
+          const response = await fetch("https://server.bookmyappointments.in/api/bma/hospital/me", {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${jwtToken}`
+            },
+          });
+          const data = await response.json();
+          if (data.success) {
+            navigation.replace("HomeScreen");
+          } else {
+            await AsyncStorage.removeItem("jwtToken");
+          }
         }
       } catch (error) {
         console.error("Error retrieving JWT token:", error);
@@ -49,9 +61,8 @@ const KeyboardAwareScrollViewComponent = ({ navigation }) => {
         const hospid = data.hospid; 
         console.log(hospid);
         await AsyncStorage.setItem("number", mobileNumber);
-        await AsyncStorage.setItem("hospid", hospid);
-    navigation.replace("OtpLogin")
-
+        await AsyncStorage.setItem("hospitalId", hospid);
+        navigation.replace("OtpLogin");
       } else {
         Alert.alert("Error", data.error);
       }
@@ -94,6 +105,7 @@ const KeyboardAwareScrollViewComponent = ({ navigation }) => {
             <TextInput
               placeholder="Enter your mobile number..."
               textContentType="oneTimeCode"
+              keyboardType="number-pad"
               style={{
                 height: 40,
                 borderColor: "#ccc",

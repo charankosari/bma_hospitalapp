@@ -69,6 +69,7 @@ const RegisterScreen = ({ navigation }) => {
   const handlePrevStep = () => {
     setCurrentStep(currentStep - 1);
   };
+
   const handleRegister = async () => {
     setLoading(true);
     let imageUrl = "";
@@ -80,8 +81,7 @@ const RegisterScreen = ({ navigation }) => {
           name: image.assets[0].fileName,
           type: image.assets[0].mimeType,
         });
-  
-        const jwtToken = await AsyncStorage.getItem("jwtToken");
+
         const response = await fetch(
           "https://server.bookmyappointments.in/api/bma/hospital/profileupload",
           {
@@ -89,22 +89,20 @@ const RegisterScreen = ({ navigation }) => {
             body: formData,
             headers: {
               "Content-Type": "multipart/form-data",
-              Authorization: `Bearer ${jwtToken}`,
             },
           }
         );
-  
         const data = await response.json();
         console.log("Image upload response:", data);
-  
+
         if (response.status !== 200) {
           throw new Error(data.error || "Failed to upload image");
         }
-  
+
         imageUrl = data.url;
         console.log("Image URL:", imageUrl);
       }
-  
+
       const body = {
         hospitalName: name,
         address: {
@@ -119,9 +117,9 @@ const RegisterScreen = ({ navigation }) => {
         role: selectedItem === "hospitals" ? "hospital" : "lab",
         image: imageUrl,
       };
-  
+
       console.log("Sending registration data:", body);
-  
+
       const response = await fetch(
         "https://server.bookmyappointments.in/api/bma/hospital/register",
         {
@@ -132,10 +130,10 @@ const RegisterScreen = ({ navigation }) => {
           body: JSON.stringify(body),
         }
       );
-  
+
       const data = await response.json();
       console.log("Registration response:", data);
-  
+
       if (response.status === 200) {
         setSuccessAlert(true);
         setTimeout(() => {
@@ -151,7 +149,6 @@ const RegisterScreen = ({ navigation }) => {
       setLoading(false);
     }
   };
-  
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -201,12 +198,12 @@ const RegisterScreen = ({ navigation }) => {
     <body>
       <div id="map"></div>
       <script>
-        var map = L.map('map').setView([${latitude || 37.78825}, ${longitude || -122.4324}], 13);
+        var map = L.map('map').setView([${latitude || 17.387140}, ${longitude || 78.491684}], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '© OpenStreetMap contributors'
+          attribution: ''
         }).addTo(map);
         
-        var marker = L.marker([${latitude || 37.78825}, ${longitude || -122.4324}], { draggable: true }).addTo(map);
+        var marker = L.marker([${latitude || 17.387140}, ${longitude || 78.491684}], { draggable: true }).addTo(map);
         
         marker.on('dragend', function(event) {
           var position = marker.getLatLng();
@@ -425,18 +422,6 @@ const RegisterScreen = ({ navigation }) => {
                       <Text style={{ color: "white", fontSize: 16 }}>Back</Text>
                     </View>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={handleRegister} disabled={loading}>
-                    <View
-                      style={{
-                        backgroundColor: "#2BB673",
-                        padding: 10,
-                        borderRadius: 5,
-                        alignItems: "center",
-                      }}
-                    >
-                      <Text style={{ color: "white", fontSize: 16 }}>Register</Text>
-                    </View>
-                  </TouchableOpacity>
                   {loading && <ActivityIndicator size="large" color="#007bff" />}
                   <TouchableOpacity onPress={pickImage} disabled={loading}>
                     <View
@@ -445,14 +430,27 @@ const RegisterScreen = ({ navigation }) => {
                         padding: 10,
                         borderRadius: 5,
                         alignItems: "center",
-                        marginTop: 10,
                       }}
                     >
                       <Text style={{ color: "white", fontSize: 16 }}>
-                        {image ? "Change Image" : "Upload Image"}
+                        {image ? "Change Image" : "Upload Image (Optional)"}
                       </Text>
                     </View>
                   </TouchableOpacity>
+                  <TouchableOpacity onPress={handleRegister} disabled={loading}>
+                    <View
+                      style={{
+                        backgroundColor: "#2BB673",
+                        padding: 10,
+                        borderRadius: 5,
+                        marginTop: 10,
+                        alignItems: "center",
+                      }}
+                    >
+                      <Text style={{ color: "white", fontSize: 16 }}>Register</Text>
+                    </View>
+                  </TouchableOpacity>
+                  
                   {image && (
                     <Image
                       source={{ uri: image.uri }}
