@@ -7,10 +7,12 @@ import {
   SafeAreaView,
   Platform,
   ActivityIndicator,
+  StyleSheet,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from "@react-navigation/native";
+import { BlurView } from "expo-blur";
 
 const SettingsScreen = ({ navigation }) => {
   const [profileImage, setProfileImage] = useState(null);
@@ -18,6 +20,7 @@ const SettingsScreen = ({ navigation }) => {
   const [image, setImage] = useState(null);
   const [hosp, setHosp] = useState('');
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   const fetchHospitalDetails = async () => {
     const token = await AsyncStorage.getItem("jwtToken");
@@ -70,16 +73,17 @@ const SettingsScreen = ({ navigation }) => {
 
     if (!pickerResult.canceled) {
       setImage(pickerResult);
+      setUploading(true); // Show loading indicator
       uploadImage(pickerResult);
     }
   };
 
-  const uploadImage = async () => {
+  const uploadImage = async (pickerResult) => {
     const formData = new FormData();
     formData.append("file", {
-      uri: image.assets[0].uri,
-      name: image.assets[0].fileName,
-      type: image.assets[0].mimeType,
+      uri: pickerResult.assets[0].uri,
+      name: pickerResult.assets[0].fileName,
+      type: pickerResult.assets[0].mimeType,
     });
 
     try {
@@ -95,14 +99,10 @@ const SettingsScreen = ({ navigation }) => {
       );
 
       const textResponse = await response.text();
-      console.log("Upload Image Response Text:", textResponse);
-
       const data = JSON.parse(textResponse);
-      console.log("Upload Image Response JSON:", data);
 
       if (response.ok) {
         const token = await AsyncStorage.getItem("jwtToken");
-        console.log("Updating profile with image URL:", data.url);
         const imageurl = data.url;
 
         try {
@@ -115,9 +115,7 @@ const SettingsScreen = ({ navigation }) => {
             body: JSON.stringify({ image: imageurl }),
           });
           const textResponse = await response.text();
-          console.log("Update Profile Image Response Text:", textResponse);
           const data = JSON.parse(textResponse);
-          console.log("Update Profile Image Response JSON:", data);
           if (response.ok && data.success) {
             setProfileImage(imageurl);
             alert("Profile updated successfully");
@@ -132,37 +130,8 @@ const SettingsScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error("Error uploading profile image:", error);
-    }
-  };
-
-  const updateProfileImage = async (imageUrl) => {
-    const token = await AsyncStorage.getItem("jwtToken");
-    console.log("Updating profile with image URL:", imageUrl);
-
-    try {
-      const response = await fetch("https://server.bookmyappointments.in/api/bma/hospital/profileupdate", {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ image: imageUrl }),
-      });
-
-      const textResponse = await response.text();
-      console.log("Update Profile Image Response Text:", textResponse);
-
-      const data = JSON.parse(textResponse);
-      console.log("Update Profile Image Response JSON:", data);
-
-      if (response.ok && data.success) {
-        setProfileImage(imageUrl);
-        alert("Profile updated successfully");
-      } else {
-        alert("Failed to update profile");
-      }
-    } catch (error) {
-      console.error("Error updating profile:", error);
+    } finally {
+      setUploading(false); 
     }
   };
 
@@ -173,101 +142,135 @@ const SettingsScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView
-      style={{
-        flex: 1,
-        paddingTop: Platform.OS === "android" ? 40 : 30,
-        marginHorizontal: 20,
-      }}
-    >
-      {loading ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <ActivityIndicator size="large" color="#007BFF" />
-        </View>
-      ) : (
+    <SafeAreaView style={styles.container}>
+      {(loading || uploading) && (
+        <BlurView intensity={50} style={styles.blurView}>
+          <ActivityIndicator size="large" color="#2BB673" />
+          <Text style={styles.loadingText}>{uploading ? "Uploading..." : "Loading..."}</Text>
+        </BlurView>
+      )}
+      {!loading && !uploading && (
         <View>
           <TouchableOpacity
             onPress={handleImageUpload}
-            style={{
-              alignItems: "center",
-              marginBottom: 20,
-              display: "flex",
-              marginTop: 40,
-              flexDirection: "column",
-              justifyContent: "center",
-              gap: 20,
-            }}
+            style={styles.imageContainer}
           >
-            <Image
-              source={{ uri: profileImage }}
-              style={{ width: 100, height: 100, borderRadius: 50 }}
-            />
-            <View
-              style={{
-                alignItems: "center",
-                marginBottom: 20,
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
-              <Text style={{ fontSize: 20, fontWeight: "bold", marginRight: 10 }}>
-                {hospitalName}
-              </Text>
-            </View>
+            {profileImage ? (
+              <Image
+                source={{ uri: profileImage }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <View style={styles.placeholder}>
+                <Text style={styles.placeholderText}>Upload Image</Text>
+              </View>
+            )}
+            <Text style={styles.hospitalName}>{hospitalName}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={{
-              paddingVertical: 15,
-              borderBottomWidth: 1,
-              borderBottomColor: "#ddd",
-            }}
+            style={styles.option}
             onPress={() => {
               navigation.navigate("Account Details", { data: hosp });
             }}
           >
-            <Text style={{ fontSize: 18 }}>Account details</Text>
+            <Text style={styles.optionText}>Account details</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={{
-              paddingVertical: 15,
-              borderBottomWidth: 1,
-              borderBottomColor: "#ddd",
-            }}
+            style={styles.option}
             onPress={() => {
               navigation.navigate("Help and Support");
             }}
           >
-            <Text style={{ fontSize: 18 }}>Help and Support</Text>
+            <Text style={styles.optionText}>Help and Support</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleSignOut}
-            style={{
-              marginTop: 20,
-              padding: 15,
-              borderRadius: 10,
-              alignItems: "center",
-            }}
+            style={styles.signOutButton}
           >
-            <Text
-              style={{
-                color: "red",
-                textDecorationLine: "underline",
-                marginBottom: 5,
-                fontSize: 20,
-                fontWeight: "semibold",
-              }}
-            >
-              Sign Out
-            </Text>
+            <Text style={styles.signOutText}>Sign Out</Text>
           </TouchableOpacity>
         </View>
       )}
     </SafeAreaView>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingTop: Platform.OS === "android" ? 40 : 30,
+    marginHorizontal: 20,
+  },
+  blurView: {
+    ...StyleSheet.absoluteFill,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#2BB673",
+  },
+  imageContainer: {
+    alignItems: "center",
+    marginBottom: 20,
+    display: "flex",
+    marginTop: 40,
+    flexDirection: "column",
+    justifyContent: "center",
+    gap: 20,
+  },
+  profileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 70,
+    borderWidth: 4,
+    borderColor: "#d7d7d7",
+  },
+  placeholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 2,
+    borderColor: "#007BFF",
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ddd",
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: "#777",
+  },
+  hospitalName: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 10,
+  },
+  option: {
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+  },
+  optionText: {
+    fontSize: 18,
+  },
+  signOutButton: {
+    marginTop: 20,
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  signOutText: {
+    color: "red",
+    textDecorationLine: "underline",
+    marginBottom: 5,
+    fontSize: 20,
+    fontWeight: "semibold",
+  },
+});
 
 export default SettingsScreen;

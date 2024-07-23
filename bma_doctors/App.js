@@ -14,6 +14,11 @@ import HelpSupport from './components/SettingsScreens/HelpSupport'
 import DoctorPreview from "./components/DoctorScreens/DoctorPreview";
 import AddDoctors from "./components/DoctorScreens/AddDoctors";
 import MyBookings from "./components/Bookings";
+import AddTests from './components/TestsScreen/AddTests'
+import TestPreview from './components/TestsScreen/TestPreview'
+import BookingTests from './components/TestsScreen/BookingsTests'
+import { enableScreens } from 'react-native-screens';
+enableScreens();
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -22,7 +27,7 @@ export default function App() {
 
     setTimeout(async () => {
       await SplashScreen.hideAsync();
-    }, 3000); // Adjust the duration as needed
+    }, 3000); 
   }, []);
 
   return (
@@ -46,12 +51,12 @@ export default function App() {
         <Stack.Screen
           name="Register"
           component={Register}
-          options={{ headerShown: false }}
+          options={{ headerShown: false, gestureEnabled: false  }}
         />
         <Stack.Screen
           name="Otp"
           component={OtpScreen}
-          options={{ headerShown: false }}
+          options={{ headerShown: false, gestureEnabled: false  }}
         />
      <Stack.Screen
           name="Ho"
@@ -83,8 +88,23 @@ export default function App() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="Add test"
+          component={AddTests}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Test preview"
+          component={TestPreview}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="MyBookings"
           component={MyBookings}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="My Bookings"
+          component={BookingTests}
           options={{ headerShown: false }}
         />
       </Stack.Navigator>

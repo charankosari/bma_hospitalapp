@@ -1,34 +1,37 @@
 {
   "expo": {
-    "name": "book my appointments doctor",
+    "name": "Book My Appointments Doctor",
     "slug": "bookmyappointmentsdoctor",
     "orientation": "portrait",
-    "icon": "./assets/logo.png",
+    "icon": "./assets/adaptive-icon.png",
     "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/logo.png",
       "resizeMode": "contain",
       "backgroundColor": "#333333"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.doctor.bookmyappointments",
+      "config": {
+        "googleMapsApiKey": "AIzaSyB_hbFsqNsWp1KKR-8qcYDq5sl2vLZeohw"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logoall.png",
-        "backgroundColor": "#000"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
       },
-      "package": "com.doctor.bookmyappointments"
+      "package": "com.doctor.bookmyappointments",
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyB_hbFsqNsWp1KKR-8qcYDq5sl2vLZeohw"
+        }
+      }
     },
     "version": "1.0.0",
-    "platforms": [
-      "ios",
-      "android",
-      "web"
-    ],
+    "platforms": ["ios", "android", "web"],
     "extra": {
       "eas": {
         "projectId": "ce4b24ad-fdf6-45d2-aed6-e2a200d8766c"

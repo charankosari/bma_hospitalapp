@@ -1,0 +1,56 @@
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <title>Select Location</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+      #map {
+        height: 100%;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+      var map = L.map('map').setView([17.387140,  78.491684], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: ''
+      }).addTo(map);
+  -
+     
+  
+      map.on('click', function(e) {
+        var position = e.latlng;
+        marker.setLatLng(position);
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          latitude: position.lat,
+          longitude: position.lng
+        }));
+      });
+      const  marker = L.marker([7.387140,  78.491684], { draggable: true }).addTo(map);
+      marker.on('dragend', function(event) {
+        var position = marker.getLatLng();
+        window.ReactNativeWebView.postMessage(JSON.stringify({
+          latitude: position.lat,
+          longitude: position.lng
+        }));
+      });
+  
+      map.touchZoom.enable();
+      map.scrollWheelZoom.enable();
+  
+      if (window.matchMedia("(max-width: 767px)").matches) {
+        map.dragging.enable();
+      } else {
+        map.dragging.disable();
+      }
+    </script>
+  </body>
+  </html>

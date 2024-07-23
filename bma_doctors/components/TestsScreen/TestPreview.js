@@ -25,30 +25,27 @@ import moment from 'moment';
 const DoctorPreviewPage = ({navigation}) => {
   const route = useRoute();
   const { doctor } = route.params;
-
   const [name, setName] = useState(doctor.name);
-  const [study, setStudy] = useState(doctor.study);
-  const [specialist, setSpecialist] = useState(doctor.specialist);
   const [consultancyFee, setConsultancyFee] = useState(
     doctor.price.consultancyfee
   );
   const [image, setImage] = useState(null);
   const [startDate, setStartDate] = useState(new Date());
   const [noOfDays, setNoOfDays] = useState(1);
+  const [morningStartTime, setMorningStartTime] = useState("08:00");
+  const [morningEndTime, setMorningEndTime] = useState("12:00");
+  const [eveningStartTime, setEveningStartTime] = useState("14:00");
+  const [eveningEndTime, setEveningEndTime] = useState("19:00");
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showMorningPicker, setShowMorningPicker] = useState(false);
-  const [showEveningPicker, setShowEveningPicker] = useState(false);
   const [showMorningEndPicker, setShowMorningEndPicker] = useState(false);
+  const [showEveningPicker, setShowEveningPicker] = useState(false);
   const [showEveningEndPicker, setShowEveningEndPicker] = useState(false);
   const [imageUrl, setImageUrl] = useState(doctor.image);
   const [manageSlots, setManageSlots] = useState(false);
   const [loading, setLoading] = useState(false);
   const [jwtToken, setJwtToken] = useState(null);
-  const [morningStartTime, setMorningStartTime] = useState("08:00");
-  const [morningEndTime, setMorningEndTime] = useState("12:00");
-  const [eveningStartTime, setEveningStartTime] = useState("14:00");
-  const [eveningEndTime, setEveningEndTime] = useState("19:00");
-  
+
   useEffect(() => {
     const fetchJWT = async () => {
       const token = await AsyncStorage.getItem("jwtToken");
@@ -56,6 +53,7 @@ const DoctorPreviewPage = ({navigation}) => {
     };
     fetchJWT();
   }, []);
+
   const convertTimeStringToDate = (timeString) => {
     const [hours, minutes] = timeString.split(":").map(Number);
     const date = new Date();
@@ -63,12 +61,11 @@ const DoctorPreviewPage = ({navigation}) => {
     date.setMinutes(minutes);
     return date;
   };
-  
-
   const handleDateChange = (date) => {
     setStartDate(date);
     setShowDatePicker(false);
   };
+
   const handleTimeChange = (time, type) => {
     const formattedTime = time.toLocaleTimeString([], {
       hour: "2-digit",
@@ -79,16 +76,15 @@ const DoctorPreviewPage = ({navigation}) => {
       setShowMorningPicker(false);
     } else if (type === "morningEnd") {
       setMorningEndTime(formattedTime);
-      setShowMorningEndPicker(false); // Corrected to setShowMorningEndPicker
+      setShowMorningEndPicker(false);
     } else if (type === "eveningStart") {
       setEveningStartTime(formattedTime);
       setShowEveningPicker(false);
     } else if (type === "eveningEnd") {
       setEveningEndTime(formattedTime);
-      setShowEveningEndPicker(false); // Corrected to setShowEveningEndPicker
+      setShowEveningEndPicker(false);
     }
   };
-  
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -129,19 +125,16 @@ const DoctorPreviewPage = ({navigation}) => {
       );
 
       const data = await response.json();
-      console.log(data);
 
       if (response.status !== 200) {
         throw new Error(data.error || "Failed to upload image");
       }
-
       const payload = {
-        docid: doctor.id,
+        testid: doctor.id,
         image: data.url,
       };
-
       await fetch(
-        "https://server.bookmyappointments.in/api/bma/hospital/editdoctor",
+        "https://server.bookmyappointments.in/api/bma/hospital/edittest",
         {
           method: "PUT",
           headers: {
@@ -151,8 +144,7 @@ const DoctorPreviewPage = ({navigation}) => {
           body: JSON.stringify(payload),
         }
       );
-
-      setImageUrl(data.url);
+      setImageUrl(data.url); 
       setLoading(false);
     } catch (error) {
       console.error(error);
@@ -171,8 +163,9 @@ const DoctorPreviewPage = ({navigation}) => {
           style: "destructive",
           onPress: async () => {
             try {
+              console.log(doctor._id)
               const response = await fetch(
-                `https://server.bookmyappointments.in/api/bma/hospital/deleteDoctor/${doctor.id}`,
+                `https://server.bookmyappointments.in/api/bma/hospital/deletetest/${doctor._id}`,
                 {
                   method: "DELETE",
                   headers: {
@@ -182,15 +175,14 @@ const DoctorPreviewPage = ({navigation}) => {
                 }
               );
               if (!response.ok) {
-                throw new Error("Failed to delete doctor");
+                throw new Error("Failed to delete test");
               }
 
-              Alert.alert("Success", "Doctor deleted successfully");
-              console.log("Doctor deleted successfully");
-              navigation.goBack(); 
+              Alert.alert("Success", "Test deleted successfully");
+              navigation.goBack();
             } catch (error) {
               console.error(error);
-              Alert.alert("Error", "Failed to delete doctor");
+              Alert.alert("Error", "Failed to delete test");
             }
           },
         },
@@ -201,7 +193,7 @@ const DoctorPreviewPage = ({navigation}) => {
     setLoading(true);
     
     const payload = {
-      doctorId: doctor.id,
+      testId: doctor.id,
       date: moment(startDate).format('YYYY-MM-DD'),
       noOfDays,
       slotTimings: 30,
@@ -216,7 +208,7 @@ const DoctorPreviewPage = ({navigation}) => {
     };
     try {
       const response = await fetch(
-        "https://server.bookmyappointments.in/api/bma/hospital/me/addmoresessions",
+        "https://server.bookmyappointments.in/api/bma/hospital/me/addlabsessions",
         {
           method: "POST",
           headers: {
@@ -240,17 +232,18 @@ const DoctorPreviewPage = ({navigation}) => {
 
   const handleSaveDoctorDetails = async () => {
     setLoading(true);
-
-    const payload = { docid: doctor.id };
+  
+    const payload = { testid: doctor.id };
+  
     if (name !== doctor.name) payload.name = name;
-    if (study !== doctor.study) payload.study = study;
-    if (specialist !== doctor.specialist) payload.specialist = specialist;
-    if (consultancyFee !== doctor.price.consultancyfee)
-      payload.consultancyfee = consultancyFee;
-
+    if (consultancyFee !== doctor.price.consultancyfee ) {
+      payload.price = {
+        consultancyfee: consultancyFee,
+      };
+    }
     try {
       const response = await fetch(
-        "https://server.bookmyappointments.in/api/bma/hospital/editdoctor",
+        "https://server.bookmyappointments.in/api/bma/hospital/edittest",
         {
           method: "PUT",
           headers: {
@@ -260,47 +253,17 @@ const DoctorPreviewPage = ({navigation}) => {
           body: JSON.stringify(payload),
         }
       );
-
       if (!response.ok) {
         throw new Error("Failed to update doctor details");
       }
-      alert("Doctor details updated successfully!");
+      alert("Test details updated successfully!");
       setLoading(false);
     } catch (error) {
       console.error(error);
-      alert("Failed to update doctor details");
+      alert("Failed to update test details");
       setLoading(false);
     }
   };
-
-  const fetchDoctorDetails = async () => {
-    try {
-      const response = await fetch(
-        "https://server.bookmyappointments.in/api/bma/hospital/singledoc",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ doctorid: doctor._id }),
-        }
-      );
-      if (!response.ok) {
-        throw new Error("Failed to fetch doctor details");
-      }
-
-      const updatedDoctor = await response.json();
-      setName(updatedDoctor.doctor.name);
-      setStudy(updatedDoctor.doctor.study);
-      setSpecialist(updatedDoctor.doctor.specialist);
-      setConsultancyFee(updatedDoctor.doctor.price.consultancyfee);
-      setImageUrl(updatedDoctor.doctor.image);
-    } catch (error) {
-      console.error(error);
-      alert("Failed to fetch doctor details");
-    }
-  };
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <KeyboardAvoidingView
@@ -313,20 +276,16 @@ const DoctorPreviewPage = ({navigation}) => {
               <Ionicons name="trash-outline" size={24} color="red" />
             </TouchableOpacity>
           </View>
-
           <TouchableOpacity onPress={pickImage} style={styles.imageContainer}>
             {loading ? (
               <ActivityIndicator size="large" color="#2BB673" />
             ) : (
               <Image
-                source={
-                 { uri: imageUrl }
-                }
-                style={styles.profileImage}
-              />
+              source={{ uri: Array.isArray(imageUrl) ? imageUrl[0] : imageUrl }}
+              style={styles.profileImage}
+            />
             )}
           </TouchableOpacity>
-
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Name</Text>
             <TextInput
@@ -335,25 +294,6 @@ const DoctorPreviewPage = ({navigation}) => {
               onChangeText={setName}
             />
           </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Study</Text>
-            <TextInput
-              style={styles.input}
-              value={study}
-              onChangeText={setStudy}
-            />
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Specialist</Text>
-            <TextInput
-              style={styles.input}
-              value={specialist}
-              onChangeText={setSpecialist}
-            />
-          </View>
-
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Consultancy Fee</Text>
             <TextInput
@@ -363,15 +303,13 @@ const DoctorPreviewPage = ({navigation}) => {
               onChangeText={setConsultancyFee}
             />
           </View>
-
-
+         
           <TouchableOpacity
             style={styles.button}
             onPress={handleSaveDoctorDetails}
           >
             <Text style={styles.buttonText}>Save</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[styles.button, { backgroundColor: "#3498db" }]}
             onPress={() => setManageSlots(true)}
@@ -382,7 +320,7 @@ const DoctorPreviewPage = ({navigation}) => {
           <TouchableOpacity
             style={[styles.button, { backgroundColor: "#e67e22" }]}
             onPress={() =>
-              navigation.navigate("MyBookings", { doctorId: doctor.id })
+              navigation.navigate("My Bookings", { testid: doctor.id })
             }
           >
             <Text style={styles.buttonText}>Show Bookings</Text>
@@ -412,7 +350,6 @@ const DoctorPreviewPage = ({navigation}) => {
                     <Text>{startDate.toDateString()}</Text>
                   </TouchableOpacity>
                 </View>
-
                 <DateTimePickerModal
                   isVisible={showDatePicker}
                   mode="date"
@@ -420,7 +357,6 @@ const DoctorPreviewPage = ({navigation}) => {
                   onConfirm={handleDateChange}
                   onCancel={() => setShowDatePicker(false)}
                 />
-
                 <View style={styles.fieldContainer}>
                   <Text style={styles.label}>Number of Days:</Text>
                   <RNPickerSelect
@@ -456,8 +392,8 @@ const DoctorPreviewPage = ({navigation}) => {
 
                 <DateTimePickerModal
                   isVisible={showMorningPicker}
-                  mode="time"
                   date={convertTimeStringToDate(morningStartTime)}
+                  mode="time"
                   textColor="#000"
                   onConfirm={(time) => handleTimeChange(time, "morningStart")}
                   onCancel={() => setShowMorningPicker(false)}
@@ -475,9 +411,9 @@ const DoctorPreviewPage = ({navigation}) => {
 
                 <DateTimePickerModal
                   isVisible={showMorningEndPicker}
+                  date={convertTimeStringToDate(morningEndTime)}
                   mode="time"
                   textColor="#000"
-                  date={convertTimeStringToDate(morningEndTime)}
                   onConfirm={(time) => handleTimeChange(time, "morningEnd")}
                   onCancel={() => setShowMorningEndPicker(false)}
                 />
@@ -495,8 +431,8 @@ const DoctorPreviewPage = ({navigation}) => {
                 <DateTimePickerModal
                   isVisible={showEveningPicker}
                   mode="time"
-                  textColor="#000"
                   date={convertTimeStringToDate(eveningStartTime)}
+                  textColor="#000"
                   onConfirm={(time) => handleTimeChange(time, "eveningStart")}
                   onCancel={() => setShowEveningPicker(false)}
                 />
@@ -513,8 +449,8 @@ const DoctorPreviewPage = ({navigation}) => {
 
                 <DateTimePickerModal
                   isVisible={showEveningEndPicker}
-                  mode="time"
                   date={convertTimeStringToDate(eveningEndTime)}
+                  mode="time"
                   textColor="#000"
                   onConfirm={(time) => handleTimeChange(time, "eveningEnd")}
                   onCancel={() => setShowEveningEndPicker(false)}

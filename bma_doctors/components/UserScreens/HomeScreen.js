@@ -6,13 +6,12 @@ import {
   Image,
   TouchableOpacity,
   FlatList,
-  SafeAreaView,
   ActivityIndicator,
-  Alert,
 } from "react-native";
 import { AntDesign } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useFocusEffect } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function App({ navigation }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,63 +19,97 @@ export default function App({ navigation }) {
   const [allDoctors, setAllDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [role, setRole] = useState("");
+  const [hospid, setHospid] = useState('');
 
-  const fetchData = async () => {
+  useEffect(() => {
+    async function fetchRoleAndData() {
+      try {
+        const userRole = await AsyncStorage.getItem("role");
+        const hospitalId = await AsyncStorage.getItem("hospitalId");
+        setHospid(hospitalId);
+        setRole(userRole);
+        if (userRole && hospitalId) {
+          fetchData(userRole, hospitalId);
+        } else {
+          throw new Error("Role or Hospital ID is missing");
+        }
+      } catch (error) {
+        console.error("Failed to fetch role and hospital ID:", error);
+        setError("Failed to fetch role and hospital ID.");
+        setLoading(false);
+      }
+    }
+    fetchRoleAndData();
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (role && hospid) {
+        fetchData(role, hospid);
+      }
+    }, [role, hospid])
+  );
+
+  const fetchData = async (userRole, hospitalId) => {
     try {
       setLoading(true);
-      const hospitalId = await AsyncStorage.getItem("hospitalId");
-      const url = `https://server.bookmyappointments.in/api/bma/user/doctors/${hospitalId}`;
+      let url = userRole === "lab" ?
+        `https://server.bookmyappointments.in/api/bma/user/labs/${hospitalId}` :
+        `https://server.bookmyappointments.in/api/bma/user/doctors/${hospitalId}`;
+
       const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! Status: ${response.status}, Body: ${errorText}`);
+      }
+
       const data = await response.json();
-      
-      if (response.ok && data.success) {
-        setAllDoctors(data.hospital.doctors);
-        setFilteredDoctors(data.hospital.doctors); // Initially set all doctors
-        setError(null); // Clear any previous errors
+
+      if (data.success) {
+        if (userRole === "lab") {
+          setAllDoctors(data.hospital.tests);
+          setFilteredDoctors(data.hospital.tests);
+        } else {
+          setAllDoctors(data.hospital.doctors);
+          setFilteredDoctors(data.hospital.doctors);
+        }
+        setError(null);
       } else {
-        setError(data.message || "Failed to fetch doctors");
+        setError(data.message || "Failed to fetch data");
       }
     } catch (error) {
-      setError(error.message || "Failed to fetch doctors");
+      console.error("Error fetching data:", error);
+      setError(error.message || "Failed to fetch data");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchData(); // Refetch data when screen gains focus
-    }, [])
-  );
   const handleSearch = (text) => {
     setSearchQuery(text);
     if (text.trim() === "") {
-      setFilteredDoctors(allDoctors); // Reset to all doctors if search query is empty
+      setFilteredDoctors(allDoctors);
     } else {
-      const filtered = allDoctors.filter((doctor) => {
-        const name = doctor.name ? doctor.name.toLowerCase() : "";
-        const study = doctor.study ? doctor.study.toLowerCase() : "";
-        const code = doctor.code ? doctor.code.toLowerCase() : "";
-        const specialist = doctor.specialist ? doctor.specialist.toLowerCase() : "";
-  
+      const filtered = allDoctors.filter((item) => {
+        const name = item.name ? item.name.toLowerCase() : "";
+        const specialist = item.specialist ? item.specialist.toLowerCase() : "";
+        const study = item.study ? item.study.toLowerCase() : "";
         return (
           name.includes(text.toLowerCase()) ||
-          study.includes(text.toLowerCase()) ||
-          code.includes(text.toLowerCase()) ||
-          specialist.includes(text.toLowerCase())
+          specialist.includes(text.toLowerCase()) ||
+          study.includes(text.toLowerCase())
         );
       });
       setFilteredDoctors(filtered);
     }
   };
-  const DoctorContainer = ({ doctor }) => (
+
+  const renderItem = ({ item }) => (
     <TouchableOpacity
       onPress={() => {
-        navigation.navigate("Doctor Preview", { doctor });
+        navigation.navigate(role === "lab" ? "Test preview" : "Doctor Preview", { doctor:item });
       }}
     >
       <View
@@ -91,21 +124,26 @@ export default function App({ navigation }) {
         }}
       >
         <Image
-          source={{ uri: doctor.image }}
+         source={{ uri: Array.isArray(item.image) ? item.image[0] : item.image }}
           style={{ width: 90, height: 90, borderRadius: 10, marginRight: 10 }}
         />
         <View style={{ flex: 1, marginLeft: 20 }}>
           <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 5 }}>
-            {doctor.name}
+            {item.name}
           </Text>
-          <Text style={{ fontSize: 16, color: "gray" }}>
-            {doctor.specialist}
-          </Text>
-          <Text style={{ fontSize: 16, color: "gray" }}>{doctor.study}</Text>
+          {role !== "lab" && (
+            <>
+              <Text style={{ fontSize: 16, color: "gray" }}>
+                {item.specialist}
+              </Text>
+              <Text style={{ fontSize: 16, color: "gray" }}>{item.study}</Text>
+            </>
+          )}
         </View>
       </View>
     </TouchableOpacity>
   );
+
   if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -113,6 +151,7 @@ export default function App({ navigation }) {
       </View>
     );
   }
+
   if (error) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -120,16 +159,10 @@ export default function App({ navigation }) {
       </View>
     );
   }
+
   return (
-    <View
-      style={{
-        flex: 1,
-        paddingHorizontal: 10,
-        marginVertical: 5,
-        backgroundColor: "#fff",
-      }}
-    >
-      <SafeAreaView>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#fff' }}>
+      <View style={{ flex: 1, paddingHorizontal: 10, marginVertical: 15 }}>
         <View
           style={{
             flexDirection: "row",
@@ -157,38 +190,38 @@ export default function App({ navigation }) {
             />
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
 
-      {filteredDoctors.length === 0 ? (
-        <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-          <Text>No doctors found</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredDoctors}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item }) => <DoctorContainer doctor={item} />}
-        />
-      )}
+        {filteredDoctors.length === 0 ? (
+          <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <Text>No {role === "lab" ? "tests" : "doctors"} found</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredDoctors}
+            keyExtractor={(item) => item._id}
+            renderItem={renderItem}
+          />
+        )}
 
-      <TouchableOpacity
-        style={{
-          position: "absolute",
-          bottom: 20,
-          right: 20,
-          backgroundColor: "#2BB673",
-          borderRadius: 50,
-          width: 60,
-          height: 60,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-        onPress={() => {
-          navigation.navigate("Add doctor");
-        }}
-      >
-        <AntDesign name="plus" size={24} color="#fff" />
-      </TouchableOpacity>
-    </View>
+        <TouchableOpacity
+          style={{
+            position: "absolute",
+            bottom: 20,
+            right: 20,
+            backgroundColor: "#2BB673",
+            borderRadius: 50,
+            width: 60,
+            height: 60,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          onPress={() => {
+            navigation.navigate(role === "lab" ? "Add test" : "Add doctor");
+          }}
+        >
+          <AntDesign name="plus" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }

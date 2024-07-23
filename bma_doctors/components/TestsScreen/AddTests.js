@@ -12,7 +12,6 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import RNPickerSelect from "react-native-picker-select";
 
 import { Slider } from "galio-framework";
 import * as ImagePicker from "expo-image-picker";
@@ -20,8 +19,6 @@ import * as ImagePicker from "expo-image-picker";
 export default function AddDoctors() {
   const [image, setImage] = useState(null);
   const [name, setName] = useState("");
-  const [speciality, setSpeciality] = useState("");
-  const [qualifications, setQualifications] = useState([]);
   const [startDate, setStartDate] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [noOfDays, setNoOfDays] = useState(1);
@@ -33,7 +30,6 @@ export default function AddDoctors() {
   const [consultancyFee, setConsultancyFee] = useState("");
   const [loading, setLoading] = useState(false);
   const [imageSelected, setImageSelected] = useState(false);
-  const [imageUrl, setImageUrl] = useState("");
 
   const [isMorningStartTimePickerVisible, setIsMorningStartTimePickerVisible] =
     useState(false);
@@ -43,39 +39,19 @@ export default function AddDoctors() {
     useState(false);
   const [isEveningEndTimePickerVisible, setIsEveningEndTimePickerVisible] =
     useState(false);
-
-  const specialityOptions = [
-    { label: "Cardiology", value: "Cardiology" },
-    { label: "Dermatology", value: "Dermatology" },
-    { label: "Neurology", value: "Neurology" },
-  ];
-  const qualificationsOptions = [
-    { label: "MBBS", value: "MBBS" },
-    { label: "MD", value: "MD" },
-    { label: "PhD", value: "PhD" },
-  ];
-  const convertTimeStringToDate = (timeString) => {
-    const [hours, minutes] = timeString.split(":").map(Number);
-    const date = new Date();
-    date.setHours(hours);
-    date.setMinutes(minutes);
-    return date;
-  };
-  
-  const toggleQualification = (qualification) => {
-    if (qualifications.includes(qualification)) {
-      setQualifications(qualifications.filter((q) => q !== qualification));
-    } else {
-      setQualifications([...qualifications, qualification]);
-    }
-  };
-
+    const convertTimeStringToDate = (timeString) => {
+      const [hours, minutes] = timeString.split(":").map(Number);
+      const date = new Date();
+      date.setHours(hours);
+      date.setMinutes(minutes);
+      return date;
+    };
   const handleDateChange = (selectedDate) => {
     setStartDate(selectedDate);
     setShowDatePicker(false);
   };
   const handleImageCancel = () => {
-    setImageSelected(false); // Reset image selection flag
+    setImageSelected(false); 
   };
   const showMorningStartTimePicker = () => {
     setIsMorningStartTimePickerVisible(true);
@@ -141,34 +117,29 @@ export default function AddDoctors() {
       alert("Sorry, we need camera roll permissions to make this work!");
       return;
     }
-
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 1,
     });
-
-    
-  if (!result.canceled) {
-    if (result.fileSize && result.fileSize > 2 * 1024 * 1024) {
-      alert("Image size exceeds 2MB. Please select a smaller image.");
-      return;
+    if (!result.canceled) {
+      const fileSizeInMB = result.assets[0].fileSize / (1024 * 1024); 
+      if (fileSizeInMB > 2) {
+        Alert.alert("Error", "Image size should not exceed 2 MB. Please select a smaller image.");
+        return;
+      }
+      setImage(result);
+      setImageSelected(true);
     }
-    setImage(result);
-    setImageSelected(true); 
-  }
   };
   const handleAddDoctor = async () => {
-    if (
-      !name ||
-      !speciality ||
-      qualifications.length === 0 ||
-      !consultancyFee 
-    ) {
+    if (!name || !consultancyFee) {
       Alert.alert("Error", "Please fill in all the fields.");
       return;
     }
+  
     setLoading(true);
+  
     try {
       let imageUrl = "";
       if (image) {
@@ -178,7 +149,7 @@ export default function AddDoctors() {
           name: image.assets[0].fileName,
           type: image.assets[0].mimeType,
         });
-
+  
         const response = await fetch(
           "https://server.bookmyappointments.in/api/bma/hospital/profileupload",
           {
@@ -189,23 +160,23 @@ export default function AddDoctors() {
             },
           }
         );
-
-        const data = await response.json();
-        console.log("Image upload response:", data);
-
-        if (response.ok && data.url) {
-          imageUrl = data.url; 
+  
+        const responseText = await response.text();
+  
+        if (response.ok) {
+          const data = JSON.parse(responseText);
+          if (data.url) {
+            imageUrl = data.url;
+          } else {
+            throw new Error("Failed to upload image: URL not found in response");
+          }
         } else {
-          throw new Error("Failed to upload image");
+          throw new Error(`Failed to upload image: ${response.status} ${response.statusText}`);
         }
       }
-      const formattedQualifications = qualifications
-        .map((item) => item)
-        .join(", ");
-      const doctorData = {
+  
+      const testData = {
         name: name,
-        study: formattedQualifications,
-        specialist: speciality,
         image: imageUrl,
         price: {
           consultancyfee: parseInt(consultancyFee),
@@ -227,28 +198,35 @@ export default function AddDoctors() {
         slotTimings: appointmentDuration,
         noOfDays: parseInt(noOfDays),
       };
-
+  
       const token = await AsyncStorage.getItem("jwtToken");
+      if (!token) {
+        throw new Error("Token not found");
+      }
+  
       const addDoctorResponse = await fetch(
-        "https://server.bookmyappointments.in/api/bma/hospital/adddoctor",
+        "https://server.bookmyappointments.in/api/bma/hospital/addtest",
         {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(doctorData),
+          body: JSON.stringify(testData),
         }
       );
-
-      const responseData = await addDoctorResponse.json();
-
+  
+      const addDoctorResponseText = await addDoctorResponse.text();
+  
       if (addDoctorResponse.ok) {
+        const responseData = JSON.parse(addDoctorResponseText);
+  
         setLoading(false);
-        Alert.alert("Success", "Doctor added successfully!");
+        Alert.alert("Success", "Test added successfully!");
+  
+        // Reset form fields
         setImage(null);
         setName("");
-        setSpeciality("");
         setStartDate(new Date());
         setNoOfDays(1);
         setAppointmentDuration(15);
@@ -257,25 +235,25 @@ export default function AddDoctors() {
         setEveningStartTime("15:00");
         setEveningEndTime("17:00");
         setConsultancyFee("");
-        setQualifications([]);
       } else {
-        throw new Error("Failed to add doctor");
+        throw new Error(`Failed to add test: ${addDoctorResponse.status} ${addDoctorResponse.statusText}`);
       }
     } catch (error) {
-      console.error("Error adding doctor:", error);
-      Alert.alert("Error", "Failed to add doctor. Please try again later.");
-    } finally {
+      console.error("Error adding test:", error);
+      Alert.alert("Error", `Failed to add test. Please try again later.\n${error.message}`);
       setLoading(false);
     }
   };
+  
+  
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        <Text style={styles.title}>Add Doctor</Text>
+        <Text style={styles.title}>Add Test</Text>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Doctor Photo</Text>
+          <Text style={styles.label}>Test Photo</Text>
           {!imageSelected && (
             <TouchableOpacity
               style={styles.imageUploadButton}
@@ -298,57 +276,16 @@ export default function AddDoctors() {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>Test Name</Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="Enter doctor's name"
+            placeholder="Enter test's name"
           />
         </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Speciality</Text>
-          <RNPickerSelect
-            style={pickerSelectStyles}
-            onValueChange={(value) => setSpeciality(value)}
-            items={specialityOptions}
-            placeholder={{
-              label: "Select speciality",
-              value: null,
-            }}
-            value={speciality}
-          />
-        </View>
-
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Qualifications</Text>
-          <ScrollView horizontal style={styles.qualificationsContainer}>
-            {qualificationsOptions.map((qual) => (
-              <TouchableOpacity
-                key={qual.value}
-                style={[
-                  styles.qualificationsButton,
-                  qualifications.includes(qual.value)
-                    ? styles.qualificationsButtonSelected
-                    : null,
-                ]}
-                onPress={() => toggleQualification(qual.value)}
-              >
-                <Text
-                  style={[
-                    styles.qualificationsButtonText,
-                    qualifications.includes(qual.value)
-                      ? styles.qualificationsButtonTextSelected
-                      : null,
-                  ]}
-                >
-                  {qual.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+       
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Start Date</Text>
           <TouchableOpacity
@@ -362,7 +299,6 @@ export default function AddDoctors() {
           <DateTimePickerModal
             isVisible={showDatePicker}
             mode="date"
-            
             textColor="#000"
             onConfirm={handleDateChange}
             onCancel={() => setShowDatePicker(false)}
@@ -375,9 +311,9 @@ export default function AddDoctors() {
             value={noOfDays}
             minimumValue={1}
             maximumValue={7}
-            step={1}
-             activeColor="#2BB673"
+            activeColor="#2BB673"
             thumbStyle={{borderColor:'#2BB673'}}
+            step={1}
             onValueChange={(value) => setNoOfDays(value)}
             style={styles.slider}
           />
@@ -398,7 +334,7 @@ export default function AddDoctors() {
           />
           <Text style={styles.sliderValue}>{appointmentDuration} mins</Text>
         </View>
-      
+        
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Consultancy Fee </Text>
           <TextInput
@@ -410,7 +346,6 @@ export default function AddDoctors() {
           />
         </View>
 
-     
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Morning Timings</Text>
@@ -431,8 +366,8 @@ export default function AddDoctors() {
           </View>
           <DateTimePickerModal
             isVisible={isMorningStartTimePickerVisible}
-            mode="time"
             date={convertTimeStringToDate(morningStartTime)}
+            mode="time"
             textColor="#000"
             onConfirm={handleMorningStartTimeConfirm}
             onCancel={hideMorningStartTimePicker}
@@ -440,8 +375,8 @@ export default function AddDoctors() {
           <DateTimePickerModal
             isVisible={isMorningEndTimePickerVisible}
             mode="time"
-            date={convertTimeStringToDate(morningEndTime)}
             textColor="#000"
+            date={convertTimeStringToDate(morningEndTime)}
             onConfirm={handleMorningEndTimeConfirm}
             onCancel={hideMorningEndTimePicker}
           />
@@ -467,15 +402,15 @@ export default function AddDoctors() {
           <DateTimePickerModal
             isVisible={isEveningStartTimePickerVisible}
             mode="time"
-            date={convertTimeStringToDate(eveningStartTime)}
             textColor="black"
+            date={convertTimeStringToDate(eveningStartTime)}
             onConfirm={handleEveningStartTimeConfirm}
             onCancel={hideEveningStartTimePicker}
           />
           <DateTimePickerModal
             isVisible={isEveningEndTimePickerVisible}
-            mode="time"
             date={convertTimeStringToDate(eveningEndTime)}
+            mode="time"
             textColor="black"
             onConfirm={handleEveningEndTimeConfirm}
             onCancel={hideEveningEndTimePicker}
@@ -485,12 +420,12 @@ export default function AddDoctors() {
         <TouchableOpacity
           style={styles.addButton}
           onPress={handleAddDoctor}
-          disabled={loading} // Disable button while loading
+          disabled={loading} 
         >
           {loading ? (
             <ActivityIndicator color="#ffffff" size="small" />
           ) : (
-            <Text style={styles.addButtonLabel}>Add Doctor</Text>
+            <Text style={styles.addButtonLabel}>Add Test</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -531,7 +466,7 @@ const styles = StyleSheet.create({
   },
   multiSelectSelectedItemText: {
     fontSize: 16,
-    color: "#2BB673", // Selected item text color
+    color: "#2BB673",
   },
   input: {
     borderWidth: 1,
@@ -647,28 +582,5 @@ const styles = StyleSheet.create({
   },
   qualificationsButtonTextSelected: {
     color: "#fff",
-  },
-});
-
-const pickerSelectStyles = StyleSheet.create({
-  inputIOS: {
-    fontSize: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    color: "#333",
-    paddingRight: 30, // to ensure the text is never behind the icon
-  },
-  inputAndroid: {
-    fontSize: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    color: "#333",
-    paddingRight: 30, // to ensure the text is never behind the icon
   },
 });

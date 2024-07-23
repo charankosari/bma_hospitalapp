@@ -1,28 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, SafeAreaView, ScrollView, ActivityIndicator, Platform, StyleSheet } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { MaterialIcons } from '@expo/vector-icons'; // Importing icons from expo
+import { MaterialIcons } from '@expo/vector-icons'; 
 import { useRoute } from '@react-navigation/native';
-
 const MyBookings = () => {
   const route = useRoute();
-  const { doctorId } = route.params; // Assuming doctorId is passed as a parameter in the route
+  const { testid } = route.params; 
   const [loading, setLoading] = useState(true);
   const [todayBookings, setTodayBookings] = useState([]);
   const [upcomingBookings, setUpcomingBookings] = useState([]);
   const [completedBookings, setCompletedBookings] = useState([]);
-
   useEffect(() => {
     const fetchBookingDetails = async () => {
       try {
         const jwtToken = await AsyncStorage.getItem('jwtToken');
-        const response = await fetch('https://server.bookmyappointments.in/api/bma/hospital/doc/bookingdetails', {
+        const response = await fetch('https://server.bookmyappointments.in/api/bma/hospital/test/bookingdetails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${jwtToken}`,
           },
-          body: JSON.stringify({ doctorId }),
+          body: JSON.stringify({ testid }),
         });
         const textResponse = await response.text();
         const responseData = JSON.parse(textResponse);
@@ -37,13 +35,11 @@ const MyBookings = () => {
         setLoading(false);
       }
     };
-
     const categorizeBookings = (bookings) => {
       const today = new Date().toISOString().slice(0, 10); 
       const todayBookings = [];
       const upcomingBookings = [];
       const completedBookings = [];
-
       bookings.forEach((item) => {
         const bookingDate = new Date(item.booking.date).toISOString().slice(0, 10);
         if (bookingDate === today) {
@@ -54,15 +50,12 @@ const MyBookings = () => {
           completedBookings.push(item);
         }
       });
-
       setTodayBookings(todayBookings);
       setUpcomingBookings(upcomingBookings);
       setCompletedBookings(completedBookings);
     };
-
     fetchBookingDetails();
-  }, [doctorId]);
-
+  }, [testid]);
   const renderBookingCard = (item) => (
     <View key={item.booking._id} style={styles.card}>
       <View style={styles.cardHeader}>
@@ -103,7 +96,6 @@ const MyBookings = () => {
       </View>
     </View>
   );
-
   return (
     <SafeAreaView style={styles.container}>
       {loading ? (
@@ -118,21 +110,18 @@ const MyBookings = () => {
               {todayBookings.map((item) => renderBookingCard(item))}
             </>
           )}
-
           {upcomingBookings.length > 0 && (
             <>
               <Text style={styles.header}>Upcoming Bookings</Text>
               {upcomingBookings.map((item) => renderBookingCard(item))}
             </>
           )}
-
           {completedBookings.length > 0 && (
             <>
               <Text style={styles.header}>Completed Bookings</Text>
               {completedBookings.map((item) => renderBookingCard(item))}
             </>
           )}
-
           {todayBookings.length === 0 && upcomingBookings.length === 0 && completedBookings.length === 0 && (
             <Text style={styles.noBookingsText}>No bookings found.</Text>
           )}

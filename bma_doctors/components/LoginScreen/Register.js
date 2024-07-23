@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Keyboard,
   Alert,
-  ActivityIndicator,
+  ActivityIndicator,  
   TouchableWithoutFeedback,
   Dimensions,
   Image,
@@ -16,8 +16,9 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { WebView } from "react-native-webview";
+import MapView, { Marker } from "react-native-maps";
+import { PROVIDER_GOOGLE } from "react-native-maps";
+import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState("");
@@ -26,14 +27,20 @@ const RegisterScreen = ({ navigation }) => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [pincode, setPincode] = useState("");
   const [city, setCity] = useState("");
-  const [latitude, setLatitude] = useState(null);
-  const [longitude, setLongitude] = useState(null);
+  const [latitude, setLatitude] = useState(17.38714);
+  const [longitude, setLongitude] = useState(78.491684);
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState(null);
   const [selectedItem, setSelectedItem] = useState("");
   const [successAlert, setSuccessAlert] = useState(false);
-  const [keyboardSpace, setKeyboardSpace] = useState(0);
   const [currentStep, setCurrentStep] = useState(1);
+
+  const handleLocationSelect = (data, details) => {
+    const { geometry, formatted_address } = details;
+    setLatitude(geometry.location.lat);
+    setLongitude(geometry.location.lng);
+    setAddress(formatted_address);
+  };
 
   useEffect(() => {
     const getLocation = async () => {
@@ -93,16 +100,11 @@ const RegisterScreen = ({ navigation }) => {
           }
         );
         const data = await response.json();
-        console.log("Image upload response:", data);
-
         if (response.status !== 200) {
           throw new Error(data.error || "Failed to upload image");
         }
-
         imageUrl = data.url;
-        console.log("Image URL:", imageUrl);
       }
-
       const body = {
         hospitalName: name,
         address: {
@@ -118,8 +120,6 @@ const RegisterScreen = ({ navigation }) => {
         image: imageUrl,
       };
 
-      console.log("Sending registration data:", body);
-
       const response = await fetch(
         "https://server.bookmyappointments.in/api/bma/hospital/register",
         {
@@ -132,7 +132,6 @@ const RegisterScreen = ({ navigation }) => {
       );
 
       const data = await response.json();
-      console.log("Registration response:", data);
 
       if (response.status === 200) {
         setSuccessAlert(true);
@@ -144,7 +143,10 @@ const RegisterScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error("Error:", error);
-      Alert.alert("Error", error.message || "Failed to register, please try again");
+      Alert.alert(
+        "Error",
+        error.message || "Failed to register, please try again"
+      );
     } finally {
       setLoading(false);
     }
@@ -165,64 +167,15 @@ const RegisterScreen = ({ navigation }) => {
 
     if (!result.canceled) {
       setImage(result);
-      console.log(result);
     }
   };
-
-  const handleMessage = (event) => {
-    const { data } = event.nativeEvent;
-    const coordinates = JSON.parse(data);
-    setLatitude(coordinates.latitude);
-    setLongitude(coordinates.longitude);
-  };
-
-  const mapHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Select Location</title>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        #map {
-          height: 100%;
-        }
-        html, body {
-          height: 100%;
-          margin: 0;
-          padding: 0;
-        }
-      </style>
-      <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-      <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    </head>
-    <body>
-      <div id="map"></div>
-      <script>
-        var map = L.map('map').setView([${latitude || 17.387140}, ${longitude || 78.491684}], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: ''
-        }).addTo(map);
-        
-        var marker = L.marker([${latitude || 17.387140}, ${longitude || 78.491684}], { draggable: true }).addTo(map);
-        
-        marker.on('dragend', function(event) {
-          var position = marker.getLatLng();
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            latitude: position.lat,
-            longitude: position.lng
-          }));
-        });
-      </script>
-    </body>
-    </html>
-  `;
 
   return (
     <View style={{ flex: 1 }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.select({ ios: 0, android: 500 })}
+        keyboardVerticalOffset={Platform.select({ ios: 0, android: 100 })}
       >
         <ScrollView
           contentContainerStyle={{
@@ -292,7 +245,8 @@ const RegisterScreen = ({ navigation }) => {
                       style={{
                         flex: 1,
                         padding: 10,
-                        backgroundColor: selectedItem === "hospitals" ? "#2BB673" : "#ccc",
+                        backgroundColor:
+                          selectedItem === "hospitals" ? "#2BB673" : "#ccc",
                         borderRadius: 5,
                         alignItems: "center",
                         marginRight: 10,
@@ -306,7 +260,8 @@ const RegisterScreen = ({ navigation }) => {
                       style={{
                         flex: 1,
                         padding: 10,
-                        backgroundColor: selectedItem === "labs" ? "#2BB673" : "#ccc",
+                        backgroundColor:
+                          selectedItem === "labs" ? "#2BB673" : "#ccc",
                         borderRadius: 5,
                         alignItems: "center",
                       }}
@@ -373,19 +328,6 @@ const RegisterScreen = ({ navigation }) => {
                     onChangeText={setCity}
                     editable={!loading}
                   />
-                  <TouchableOpacity onPress={handlePrevStep} disabled={loading}>
-                    <View
-                      style={{
-                        backgroundColor: "#6c757d",
-                        padding: 10,
-                        borderRadius: 5,
-                        alignItems: "center",
-                        marginBottom: 10,
-                      }}
-                    >
-                      <Text style={{ color: "white", fontSize: 16 }}>Back</Text>
-                    </View>
-                  </TouchableOpacity>
                   <TouchableOpacity onPress={handleNextStep} disabled={loading}>
                     <View
                       style={{
@@ -398,71 +340,183 @@ const RegisterScreen = ({ navigation }) => {
                       <Text style={{ color: "white", fontSize: 16 }}>Next</Text>
                     </View>
                   </TouchableOpacity>
-                </View>
-              )}
-              {currentStep === 3 && (
-                <View>
-                  <View style={{ height: 300, marginBottom: 12 }}>
-                    <WebView
-                      originWhitelist={["*"]}
-                      source={{ html: mapHtml }}
-                      onMessage={handleMessage}
-                    />
-                  </View>
                   <TouchableOpacity onPress={handlePrevStep} disabled={loading}>
                     <View
                       style={{
-                        backgroundColor: "#6c757d",
+                        backgroundColor: "#ccc",
                         padding: 10,
                         borderRadius: 5,
                         alignItems: "center",
-                        marginBottom: 10,
-                      }}
-                    >
-                      <Text style={{ color: "white", fontSize: 16 }}>Back</Text>
-                    </View>
-                  </TouchableOpacity>
-                  {loading && <ActivityIndicator size="large" color="#007bff" />}
-                  <TouchableOpacity onPress={pickImage} disabled={loading}>
-                    <View
-                      style={{
-                        backgroundColor: "#2BB673",
-                        padding: 10,
-                        borderRadius: 5,
-                        alignItems: "center",
+                        marginTop: 12,
                       }}
                     >
                       <Text style={{ color: "white", fontSize: 16 }}>
-                        {image ? "Change Image" : "Upload Image (Optional)"}
+                        Previous
                       </Text>
                     </View>
                   </TouchableOpacity>
-                  <TouchableOpacity onPress={handleRegister} disabled={loading}>
-                    <View
+                </View>
+              )}
+              {currentStep === 3 && (
+                <>
+                  <View style={{ flex: 1, padding: 1 }}>
+                    <GooglePlacesAutocomplete
+                      placeholder="Search location"
+                      onPress={(data, details = null) =>
+                        handleLocationSelect(data, details)
+                      }
+                      query={{
+                        key: "AIzaSyB_hbFsqNsWp1KKR-8qcYDq5sl2vLZeohw",
+                        language: "en",
+                      }}
+                      fetchDetails={true}
+                      styles={{
+                        textInputContainer: {
+                          width: "100%",
+                          backgroundColor: "#FFF",
+                          borderRadius: 5,
+                          borderWidth: 1,
+                          borderColor: "#ccc",
+                          marginBottom: 10,
+                        },
+                        textInput: {
+                          height: 40,
+                          color: "#5d5d5d",
+                          fontSize: 16,
+                        },
+                        listView: {
+                          backgroundColor: "white",
+                          borderRadius: 5,
+                          elevation: 3,
+                          marginTop: 5,
+                          overflow: "hidden",
+                          paddingHorizontal: 5,
+                        },
+                        row: {
+                          padding: 13,
+                          height: 44,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          borderBottomColor: "#eee",
+                          borderBottomWidth: 1,
+                          overflow: "hidden",
+                        },
+                        separator: {
+                          height: 0.5,
+                          backgroundColor: "#c8c7cc",
+                        },
+                        description: {
+                          fontSize: 15,
+                          color: "#000",
+                        },
+                      }}
+                      nearbyPlacesAPI="GooglePlacesSearch"
+                      debounce={200}
+                    />
+
+                    <Text
                       style={{
-                        backgroundColor: "#2BB673",
-                        padding: 10,
-                        borderRadius: 5,
-                        marginTop: 10,
-                        alignItems: "center",
+                        marginVertical: 8,
+                        color: "#555",
+                        textAlign: "center",
                       }}
                     >
-                      <Text style={{ color: "white", fontSize: 16 }}>Register</Text>
-                    </View>
-                  </TouchableOpacity>
-                  
-                  {image && (
-                    <Image
-                      source={{ uri: image.uri }}
-                      style={{
-                        width: 100,
-                        height: 100,
-                        borderRadius: 5,
-                        marginTop: 10,
+                      Hold and drag the marker to adjust.
+                    </Text>
+                    <MapView
+                        // provider={PROVIDER_GOOGLE}
+                     style={{
+                        width: "100%",
+                        height: 300,
+                        marginVertical: 12,
                       }}
-                    />
-                  )}
-                </View>
+                      region={{
+                        latitude,
+                        longitude,
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01,
+                      }}
+                    >
+                      <Marker
+                        coordinate={{
+                          latitude,
+                          longitude,
+                        }}
+                        draggable
+                        onDragEnd={(e) => {
+                          setLatitude(e.nativeEvent.coordinate.latitude);
+                          setLongitude(e.nativeEvent.coordinate.longitude);
+                        }}
+                      />
+                    </MapView>
+                    <TouchableOpacity onPress={pickImage} disabled={loading}>
+                      <View
+                        style={{
+                          backgroundColor: "#2BB673",
+                          padding: 10,
+                          borderRadius: 5,
+                          alignItems: "center",
+                          marginBottom: 12,
+                        }}
+                      >
+                        <Text style={{ color: "white", fontSize: 16 }}>
+                          {image ? "Change Image" : "Pick an Image"}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                    {image && (
+                      <Image
+                        source={{ uri: image.assets[0].uri }}
+                        style={{
+                          width: 100,
+                          height: 100,
+                          borderRadius: 50,
+                          alignSelf: "center",
+                          marginBottom: 12,
+                        }}
+                      />
+                    )}
+                    <TouchableOpacity
+                      onPress={handleRegister}
+                      disabled={loading}
+                    >
+                      <View
+                        style={{
+                          backgroundColor: "#2BB673",
+                          padding: 10,
+                          borderRadius: 5,
+                          alignItems: "center",
+                        }}
+                      >
+                        {loading ? (
+                          <ActivityIndicator size="small" color="#fff" />
+                        ) : (
+                          <Text style={{ color: "white", fontSize: 16 }}>
+                            Register
+                          </Text>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={handlePrevStep}
+                      disabled={loading}
+                    >
+                      <View
+                        style={{
+                          backgroundColor: "#ccc",
+                          padding: 10,
+                          borderRadius: 5,
+                          alignItems: "center",
+                          marginTop: 12,
+                        }}
+                      >
+                        <Text style={{ color: "white", fontSize: 16 }}>
+                          Previous
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+                </>
               )}
             </View>
           </TouchableWithoutFeedback>

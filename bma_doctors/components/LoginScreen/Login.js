@@ -21,7 +21,6 @@ const KeyboardAwareScrollViewComponent = ({ navigation }) => {
     const checkToken = async () => {
       try {
         const jwtToken = await AsyncStorage.getItem("jwtToken");
-        console.log("JWT Token:", jwtToken);
         if (jwtToken) {
           const response = await fetch("https://server.bookmyappointments.in/api/bma/hospital/me", {
             method: "GET",
@@ -59,7 +58,6 @@ const KeyboardAwareScrollViewComponent = ({ navigation }) => {
       const data = await response.json();
       if (response.ok) {
         const hospid = data.hospid; 
-        console.log(hospid);
         await AsyncStorage.setItem("number", mobileNumber);
         await AsyncStorage.setItem("hospitalId", hospid);
         navigation.replace("OtpLogin");

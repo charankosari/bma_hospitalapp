@@ -1,33 +1,14 @@
-import React, { useState, useEffect } from "react";
-import {
-  Text,
-  View,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import OTPInputView from '@twotalltotems/react-native-otp-input'
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CodeField, Cursor } from 'react-native-confirmation-code-field';
 
 const OtpScreen = ({ navigation }) => {
-  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [timer, setTimer] = useState(30);
+  const [timer, setTimer] = useState(30); // Initial timer value
   const [hid, setHid] = useState("");
-
-  useEffect(() => {
-    const countdownInterval = setInterval(() => {
-      setTimer((prevTimer) => {
-        if (prevTimer === 0) {
-          clearInterval(countdownInterval);
-          return prevTimer;
-        }
-        return prevTimer - 1;
-      });
-    }, 1000);
-    return () => clearInterval(countdownInterval);
-  }, []);
+  const [otp, setOtp] = useState('');
 
   useEffect(() => {
     const getHospId = async () => {
@@ -35,15 +16,28 @@ const OtpScreen = ({ navigation }) => {
       setHid(hospid);
     };
     getHospId();
+    handleReceivedOTP(""); // Assuming you're handling received OTP here
   }, []);
+
+  useEffect(() => {
+    let interval;
+    if (timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prevTimer) => prevTimer - 1);
+      }, 1000);
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
 
   const handleVerifyNow = async () => {
     if (otp.length === 4) {
       setLoading(true);
       const otpNumber = Number(otp);
-      const url =
-        "https://server.bookmyappointments.in/api/bma/hospital/verifyotp";
+      const url = "https://server.bookmyappointments.in/api/bma/hospital/verifyotp";
       const payload = { hospid: hid, otp: otpNumber };
+      
       try {
         const response = await fetch(url, {
           method: "POST",
@@ -52,9 +46,15 @@ const OtpScreen = ({ navigation }) => {
           },
           body: JSON.stringify(payload),
         });
+
         const responseData = await response.json();
         if (response.ok && responseData.success) {
           await AsyncStorage.setItem("jwtToken", responseData.jwtToken);
+          await AsyncStorage.setItem("hospitalId", responseData.hosp._id);
+          await AsyncStorage.setItem(
+            "role",
+            responseData.hosp.role === "hospital" ? "hospital" : "lab"
+          );
           await AsyncStorage.removeItem("number");
           navigation.replace("HomeScreen");
         } else {
@@ -74,56 +74,82 @@ const OtpScreen = ({ navigation }) => {
   };
 
   const handleResendOtp = async () => {
-    setResendLoading(true);
-    try {
-      const response = await fetch(
-        "https://server.bookmyappointments.in/api/bma/hospital/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ number: await AsyncStorage.getItem("number") }),
+    if (timer === 0) {
+      setResendLoading(true);
+      try {
+        const response = await fetch(
+          "https://server.bookmyappointments.in/api/bma/hospital/login",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              number: await AsyncStorage.getItem("number"),
+            }),
+          }
+        );
+        const data = await response.json();
+        if (response.ok) {
+          Alert.alert("Success", "OTP has been resent");
+          setTimer(30); // Reset the timer
+        } else {
+          Alert.alert("Error", data.error);
         }
-      );
-      const data = await response.json();
-      if (response.ok) {
-        Alert.alert("Success", "OTP has been resent");
-        setTimer(30); // Reset the timer
-      } else {
-        Alert.alert("Error", data.error);
+      } catch (error) {
+        Alert.alert("Error", "Failed to resend OTP, please try again");
+      } finally {
+        setResendLoading(false);
       }
-    } catch (error) {
-      Alert.alert("Error", "Failed to resend OTP, please try again");
-    } finally {
-      setResendLoading(false);
+    } else {
+      Alert.alert("Info", `Please wait for ${timer} seconds before resending OTP`);
     }
   };
 
+  const handleReceivedOTP = (receivedOTP) => {
+    setOtp(receivedOTP); // Set the received OTP in state
+  };
+
+  // Custom renderCell function for different style
+  const renderCustomCell = ({ index, symbol, isFocused }) => (
+    <View
+      key={index}
+      style={{
+        width: 50,
+        height: 50,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: isFocused ? "#2BB673" : "#FFFFFF",
+        borderWidth: 1,
+        borderColor: isFocused ? "#2BB673" : "#000000",
+        borderRadius: 10,
+        margin: 10,
+      }}
+    >
+      <Text style={{ fontSize: 24, color: isFocused ? "#FFFFFF" : "#000000" }}>
+        {symbol || (isFocused ? <Cursor /> : null)}
+      </Text>
+    </View>
+  );
+
   return (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, justifyContent: "center", alignItems: "center" }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <Text style={{ fontSize: 18, marginBottom: 20 }}>
         We have sent you the code
       </Text>
-      <OTPInputView
-        style={{ width: "80%", height: 200 }}
-        pinCount={4}
-        autoFocusOnLoad
-        codeInputFieldStyle={{
-          width: 50,
-          height: 50,
-          borderWidth: 1,
-          borderColor: "#2BB673",
-          borderRadius: 5,
-          fontSize: 20,
-          color:'black'
+      <CodeField
+        value={otp}
+        onChangeText={(text) => {
+          setOtp(text);
         }}
-        codeInputHighlightStyle={{
-          borderColor: "#000",
-        }}
-        onCodeFilled={(code) => {
-          setOtp(code);
-        }}
+        cellCount={4}
+        rootStyle={{ marginBottom: 20 }}
+        keyboardType="number-pad"
+        textContentType="oneTimeCode"
+        renderCell={renderCustomCell}
       />
       <TouchableOpacity
         style={{
@@ -171,7 +197,7 @@ const OtpScreen = ({ navigation }) => {
           </Text>
         )}
       </TouchableOpacity>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
