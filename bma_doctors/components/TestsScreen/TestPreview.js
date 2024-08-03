@@ -117,10 +117,15 @@ const DoctorPreviewPage = ({ navigation }) => {
       allowsEditing: true,
       quality: 1,
     });
-    if (!result.canceled) {
-      setImage(result);
-      handleImageUpload(result);
+    
+  if (!result.canceled) {
+    if (result.assets[0].fileSize && result.assets[0].fileSize > 2 * 1024 * 1024) {
+      alert("Image size exceeds 2MB. Please select a smaller image.");
+      return;
     }
+    setImage(result);
+    handleImageUpload(result); 
+  }
   };
 
   const handleImageUpload = async (result) => {
