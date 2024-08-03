@@ -17,7 +17,7 @@ import RNPickerSelect from "react-native-picker-select";
 import { Slider } from "galio-framework";
 import * as ImagePicker from "expo-image-picker";
 
-export default function AddDoctors() {
+export default function AddDoctors({navigation}) {
   const [image, setImage] = useState(null);
   const [name, setName] = useState("");
   const [speciality, setSpeciality] = useState("");
@@ -26,10 +26,10 @@ export default function AddDoctors() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [noOfDays, setNoOfDays] = useState(1);
   const [appointmentDuration, setAppointmentDuration] = useState(15);
-  const [morningStartTime, setMorningStartTime] = useState("09:00");
-  const [morningEndTime, setMorningEndTime] = useState("12:00");
-  const [eveningStartTime, setEveningStartTime] = useState("15:00");
-  const [eveningEndTime, setEveningEndTime] = useState("17:00");
+  const [morningStartTime, setMorningStartTime] = useState("");
+  const [morningEndTime, setMorningEndTime] = useState("");
+  const [eveningStartTime, setEveningStartTime] = useState("");
+  const [eveningEndTime, setEveningEndTime] = useState("");
   const [consultancyFee, setConsultancyFee] = useState("");
   const [loading, setLoading] = useState(false);
   const [imageSelected, setImageSelected] = useState(false);
@@ -159,26 +159,33 @@ export default function AddDoctors() {
   }
   };
   const handleAddDoctor = async () => {
-    if (
-      !name ||
-      !speciality ||
-      qualifications.length === 0 ||
-      !consultancyFee 
-    ) {
+    if (!name || !speciality || qualifications.length === 0 || !consultancyFee ||!morningStartTime||!morningEndTime||!eveningStartTime||!eveningEndTime) {
       Alert.alert("Error", "Please fill in all the fields.");
       return;
     }
+  
     setLoading(true);
+  
     try {
       let imageUrl = "";
+  
       if (image) {
+        const imageSizeInMB = image.assets[0].fileSize / (1024 * 1024);
+        const MAX_SIZE_MB = 2;
+  
+        if (imageSizeInMB > MAX_SIZE_MB) {
+          Alert.alert("Error", "Image size should be less than 2 MB.");
+          setLoading(false);
+          return;
+        }
+  
         const formData = new FormData();
         formData.append("file", {
           uri: image.assets[0].uri,
           name: image.assets[0].fileName,
           type: image.assets[0].mimeType,
         });
-
+  
         const response = await fetch(
           "https://server.bookmyappointments.in/api/bma/hospital/profileupload",
           {
@@ -189,21 +196,19 @@ export default function AddDoctors() {
             },
           }
         );
-
+  
         const data = await response.json();
-        console.log("Image upload response:", data);
-
+  
         if (response.ok && data.url) {
-          imageUrl = data.url; 
+          imageUrl = data.url;
         } else {
           throw new Error("Failed to upload image");
         }
       }
-      const formattedQualifications = qualifications
-        .map((item) => item)
-        .join(", ");
+  
+      const formattedQualifications = qualifications.join(", ");
       const doctorData = {
-        name: name,
+        name,
         study: formattedQualifications,
         specialist: speciality,
         image: imageUrl,
@@ -224,10 +229,10 @@ export default function AddDoctors() {
             },
           ],
         },
-        slotTimings: appointmentDuration,
+        slotTimings: parseInt(appointmentDuration),
         noOfDays: parseInt(noOfDays),
       };
-
+  
       const token = await AsyncStorage.getItem("jwtToken");
       const addDoctorResponse = await fetch(
         "https://server.bookmyappointments.in/api/bma/hospital/adddoctor",
@@ -240,11 +245,15 @@ export default function AddDoctors() {
           body: JSON.stringify(doctorData),
         }
       );
-
-      const responseData = await addDoctorResponse.json();
-
+      const responseText = await addDoctorResponse.text();
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error("Error parsing response JSON:", parseError);
+        throw new Error("Response is not in JSON format.");
+      }
       if (addDoctorResponse.ok) {
-        setLoading(false);
         Alert.alert("Success", "Doctor added successfully!");
         setImage(null);
         setName("");
@@ -259,13 +268,14 @@ export default function AddDoctors() {
         setConsultancyFee("");
         setQualifications([]);
       } else {
-        throw new Error("Failed to add doctor");
+        throw new Error(responseData.message || "Failed to add doctor");
       }
     } catch (error) {
       console.error("Error adding doctor:", error);
       Alert.alert("Error", "Failed to add doctor. Please try again later.");
     } finally {
       setLoading(false);
+      navigation.goBack();
     }
   };
 
@@ -349,7 +359,7 @@ export default function AddDoctors() {
             ))}
           </ScrollView>
         </View>
-        <View style={styles.inputContainer}>
+        {/* <View style={styles.inputContainer}>
           <Text style={styles.label}>Start Date</Text>
           <TouchableOpacity
             style={styles.datePickerButton}
@@ -367,20 +377,22 @@ export default function AddDoctors() {
             onConfirm={handleDateChange}
             onCancel={() => setShowDatePicker(false)}
           />
-        </View>
+        </View> */}
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Number of Days Available</Text>
           <Slider
-            value={noOfDays}
-            minimumValue={1}
-            maximumValue={7}
-            step={1}
-             activeColor="#2BB673"
-            thumbStyle={{borderColor:'#2BB673'}}
-            onValueChange={(value) => setNoOfDays(value)}
-            style={styles.slider}
-          />
+        value={noOfDays}
+        minimumValue={1}
+        maximumValue={7}
+        thumbStyle={{borderColor:'#2BB673'}}
+        step={1}
+         activeColor="#2BB673"
+        onValueChange={(value) => {
+          setNoOfDays(value);
+        }}
+        style={styles.slider}
+      />
           <Text style={styles.sliderValue}>{noOfDays} days</Text>
         </View>
 
@@ -393,7 +405,9 @@ export default function AddDoctors() {
             activeColor="#2BB673"
             thumbStyle={{borderColor:'#2BB673'}}
             step={5}
-            onValueChange={(value) => setAppointmentDuration(value)}
+            onValueChange={(value) => {
+              setAppointmentDuration(value);
+            }}
             style={styles.slider}
           />
           <Text style={styles.sliderValue}>{appointmentDuration} mins</Text>
@@ -409,43 +423,44 @@ export default function AddDoctors() {
             placeholder="Enter consultancy fee"
           />
         </View>
-
-     
-
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Morning Timings</Text>
-          <View style={styles.timePickerContainer}>
-            <TouchableOpacity
-              style={styles.timePickerButton}
-              onPress={showMorningStartTimePicker}
-            >
-              <Text style={styles.timePickerText}>{morningStartTime}</Text>
-            </TouchableOpacity>
-            <Text style={styles.timePickerSeparator}>to</Text>
-            <TouchableOpacity
-              style={styles.timePickerButton}
-              onPress={showMorningEndTimePicker}
-            >
-              <Text style={styles.timePickerText}>{morningEndTime}</Text>
-            </TouchableOpacity>
-          </View>
-          <DateTimePickerModal
-            isVisible={isMorningStartTimePickerVisible}
-            mode="time"
-            date={convertTimeStringToDate(morningStartTime)}
-            textColor="#000"
-            onConfirm={handleMorningStartTimeConfirm}
-            onCancel={hideMorningStartTimePicker}
-          />
-          <DateTimePickerModal
-            isVisible={isMorningEndTimePickerVisible}
-            mode="time"
-            date={convertTimeStringToDate(morningEndTime)}
-            textColor="#000"
-            onConfirm={handleMorningEndTimeConfirm}
-            onCancel={hideMorningEndTimePicker}
-          />
-        </View>
+      <Text style={styles.label}>Morning Timings</Text>
+      <View style={styles.timePickerContainer}>
+        <TouchableOpacity
+          style={styles.timePickerButton}
+          onPress={showMorningStartTimePicker}
+        >
+          <Text style={styles.timePickerText}>
+            {morningStartTime || "Select Start Time"}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.timePickerSeparator}>to</Text>
+        <TouchableOpacity
+          style={styles.timePickerButton}
+          onPress={showMorningEndTimePicker}
+        >
+          <Text style={styles.timePickerText}>
+            {morningEndTime || "Select End Time"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <DateTimePickerModal
+        isVisible={isMorningStartTimePickerVisible}
+        textColor="black"
+        mode="time"
+        date={morningStartTime?convertTimeStringToDate(morningStartTime):convertTimeStringToDate('09:00')}
+        onConfirm={handleMorningStartTimeConfirm}
+        onCancel={hideMorningStartTimePicker}
+      />
+      <DateTimePickerModal
+        isVisible={isMorningEndTimePickerVisible}
+        mode="time"
+           textColor="black"
+        date={morningEndTime?convertTimeStringToDate(morningEndTime):convertTimeStringToDate('12:00')}
+        onConfirm={handleMorningEndTimeConfirm}
+        onCancel={hideMorningEndTimePicker}
+      />
+    </View>
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Evening Timings</Text>
@@ -454,20 +469,20 @@ export default function AddDoctors() {
               style={styles.timePickerButton}
               onPress={showEveningStartTimePicker}
             >
-              <Text style={styles.timePickerText}>{eveningStartTime}</Text>
+              <Text style={styles.timePickerText}> {eveningStartTime || "Select start Time"}</Text>
             </TouchableOpacity>
             <Text style={styles.timePickerSeparator}>to</Text>
             <TouchableOpacity
               style={styles.timePickerButton}
               onPress={showEveningEndTimePicker}
             >
-              <Text style={styles.timePickerText}>{eveningEndTime}</Text>
+               <Text style={styles.timePickerText}> {eveningEndTime || "Select end Time"}</Text>
             </TouchableOpacity>
           </View>
           <DateTimePickerModal
             isVisible={isEveningStartTimePickerVisible}
             mode="time"
-            date={convertTimeStringToDate(eveningStartTime)}
+            date={eveningStartTime?convertTimeStringToDate(eveningStartTime):convertTimeStringToDate('13:00')}
             textColor="black"
             onConfirm={handleEveningStartTimeConfirm}
             onCancel={hideEveningStartTimePicker}
@@ -475,7 +490,8 @@ export default function AddDoctors() {
           <DateTimePickerModal
             isVisible={isEveningEndTimePickerVisible}
             mode="time"
-            date={convertTimeStringToDate(eveningEndTime)}
+
+            date={eveningEndTime?convertTimeStringToDate(eveningEndTime):convertTimeStringToDate('18:00')}
             textColor="black"
             onConfirm={handleEveningEndTimeConfirm}
             onCancel={hideEveningEndTimePicker}
@@ -485,7 +501,7 @@ export default function AddDoctors() {
         <TouchableOpacity
           style={styles.addButton}
           onPress={handleAddDoctor}
-          disabled={loading} // Disable button while loading
+          disabled={loading} 
         >
           {loading ? (
             <ActivityIndicator color="#ffffff" size="small" />

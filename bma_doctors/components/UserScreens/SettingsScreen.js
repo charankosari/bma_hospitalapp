@@ -185,7 +185,22 @@ const SettingsScreen = ({ navigation }) => {
           >
             <Text style={styles.optionText}>Help and Support</Text>
           </TouchableOpacity>
-
+          <TouchableOpacity
+          style={styles.option}
+          onPress={() => {
+            navigation.navigate("Terms and conditions");
+          }}
+        >
+          <Text style={styles.optionText}>Terms and conditions</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.option}
+          onPress={() => {
+            navigation.navigate("Privacy Policy");
+          }}
+        >
+          <Text style={styles.optionText}>Privacy Policy</Text>
+        </TouchableOpacity>
           <TouchableOpacity
             onPress={handleSignOut}
             style={styles.signOutButton}

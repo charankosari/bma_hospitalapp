@@ -20,9 +20,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import RNPickerSelect from "react-native-picker-select";
-import moment from 'moment';
+import moment from "moment";
 
-const DoctorPreviewPage = ({navigation}) => {
+const DoctorPreviewPage = ({ navigation }) => {
   const route = useRoute();
   const { doctor } = route.params;
   const [name, setName] = useState(doctor.name);
@@ -30,12 +30,24 @@ const DoctorPreviewPage = ({navigation}) => {
     doctor.price.consultancyfee
   );
   const [image, setImage] = useState(null);
-  const [startDate, setStartDate] = useState(new Date());
-  const [noOfDays, setNoOfDays] = useState(1);
-  const [morningStartTime, setMorningStartTime] = useState("08:00");
-  const [morningEndTime, setMorningEndTime] = useState("12:00");
-  const [eveningStartTime, setEveningStartTime] = useState("14:00");
-  const [eveningEndTime, setEveningEndTime] = useState("19:00");
+  const [startDate, setStartDate] = useState("");
+  const [noOfDays, setNoOfDays] = useState(null);
+  const [morningStartTime, setMorningStartTime] = useState(
+    "Select morning start time"
+  );
+  const [morningEndTime, setMorningEndTime] = useState(
+    "Select morning end time"
+  );
+  const [eveningStartTime, setEveningStartTime] = useState(
+    "Select evening start time"
+  );
+  const [eveningEndTime, setEveningEndTime] = useState(
+    "Select evening end time"
+  );
+  const defaultStartmorning = "08:00";
+  const defaultEndmorning = "12:00";
+  const defaultStartEvening = "13:00";
+  const defaultEndEvening = "19:00";
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showMorningPicker, setShowMorningPicker] = useState(false);
   const [showMorningEndPicker, setShowMorningEndPicker] = useState(false);
@@ -53,7 +65,15 @@ const DoctorPreviewPage = ({navigation}) => {
     };
     fetchJWT();
   }, []);
-
+  const onCloseManageSlots = () => {
+    setMorningStartTime("Select morning start time");
+    setEveningStartTime("Select evening start time");
+    setMorningEndTime("Select morning end time");
+    setEveningEndTime("Select evening end time");
+    setStartDate(null);
+    setNoOfDays(null);
+    setManageSlots(false);
+  };
   const convertTimeStringToDate = (timeString) => {
     const [hours, minutes] = timeString.split(":").map(Number);
     const date = new Date();
@@ -144,7 +164,7 @@ const DoctorPreviewPage = ({navigation}) => {
           body: JSON.stringify(payload),
         }
       );
-      setImageUrl(data.url); 
+      setImageUrl(data.url);
       setLoading(false);
     } catch (error) {
       console.error(error);
@@ -163,7 +183,7 @@ const DoctorPreviewPage = ({navigation}) => {
           style: "destructive",
           onPress: async () => {
             try {
-              console.log(doctor._id)
+              console.log(doctor._id);
               const response = await fetch(
                 `https://server.bookmyappointments.in/api/bma/hospital/deletetest/${doctor._id}`,
                 {
@@ -190,11 +210,37 @@ const DoctorPreviewPage = ({navigation}) => {
     );
   };
   const handleSaveSlots = async () => {
+    const currentDate = moment();
+    const selectedDate = moment(startDate);
     setLoading(true);
-    
+    if (
+      !startDate ||
+      !noOfDays ||
+      morningStartTime === "Select morning start time" ||
+      morningEndTime === "Select morning end time" ||
+      eveningStartTime === "Select evening start time" ||
+      eveningEndTime === "Select evening end time"
+    ) {
+      alert("Please fill all the details.");
+
+      setLoading(false);
+      return;
+    }
+    if (selectedDate.isBefore(currentDate)) {
+      alert("Please select a date from today");
+      setLoading(false);
+      return;
+    }
+    const formattedDate = moment(startDate).format("YYYY-MM-DD");
+    const checkDate = moment(startDate).format("DD-MM-YYYY");
+    if (doctor.bookingsids && doctor.bookingsids[checkDate]) {
+      alert("Selected date already has existing slots.");
+      setLoading(false);
+      return;
+    }
     const payload = {
       testId: doctor.id,
-      date: moment(startDate).format('YYYY-MM-DD'),
+      date: formattedDate,
       noOfDays,
       slotTimings: 30,
       morning: {
@@ -232,11 +278,11 @@ const DoctorPreviewPage = ({navigation}) => {
 
   const handleSaveDoctorDetails = async () => {
     setLoading(true);
-  
+
     const payload = { testid: doctor.id };
-  
+
     if (name !== doctor.name) payload.name = name;
-    if (consultancyFee !== doctor.price.consultancyfee ) {
+    if (consultancyFee !== doctor.price.consultancyfee) {
       payload.price = {
         consultancyfee: consultancyFee,
       };
@@ -281,9 +327,11 @@ const DoctorPreviewPage = ({navigation}) => {
               <ActivityIndicator size="large" color="#2BB673" />
             ) : (
               <Image
-              source={{ uri: Array.isArray(imageUrl) ? imageUrl[0] : imageUrl }}
-              style={styles.profileImage}
-            />
+                source={{
+                  uri: Array.isArray(imageUrl) ? imageUrl[0] : imageUrl,
+                }}
+                style={styles.profileImage}
+              />
             )}
           </TouchableOpacity>
           <View style={styles.inputContainer}>
@@ -303,7 +351,7 @@ const DoctorPreviewPage = ({navigation}) => {
               onChangeText={setConsultancyFee}
             />
           </View>
-         
+
           <TouchableOpacity
             style={styles.button}
             onPress={handleSaveDoctorDetails}
@@ -335,10 +383,18 @@ const DoctorPreviewPage = ({navigation}) => {
             <View style={styles.modalContainer}>
               <View style={styles.modalContent}>
                 <TouchableOpacity
-                  onPress={() => setManageSlots(false)}
+                  onPress={() => onCloseManageSlots()}
                   style={styles.closeButton}
                 >
-                  <Ionicons name="close-circle" size={24} color="red" />
+                  <View style={{ flexDirection: "row", alignItems: "center" }}>
+                    <Text style={{ color: "red" }}>Close</Text>
+                    <Ionicons
+                      name="close-circle"
+                      size={24}
+                      color="red"
+                      style={{ marginLeft: 5 }}
+                    />
+                  </View>
                 </TouchableOpacity>
                 <Text style={styles.modalTitle}>Manage Slots</Text>
                 <View style={styles.inputContainer}>
@@ -347,7 +403,9 @@ const DoctorPreviewPage = ({navigation}) => {
                     onPress={() => setShowDatePicker(true)}
                     style={styles.dateInput}
                   >
-                    <Text>{startDate.toDateString()}</Text>
+                    <Text>
+                      {startDate ? startDate.toDateString() : "Select Date"}
+                    </Text>
                   </TouchableOpacity>
                 </View>
                 <DateTimePickerModal
@@ -377,6 +435,10 @@ const DoctorPreviewPage = ({navigation}) => {
                     ]}
                     style={pickerSelectStyles}
                     value={noOfDays}
+                    placeholder={{
+                      label: "Select Number of Days",
+                      value: null,
+                    }}
                   />
                 </View>
 
@@ -389,11 +451,10 @@ const DoctorPreviewPage = ({navigation}) => {
                     <Text>{morningStartTime}</Text>
                   </TouchableOpacity>
                 </View>
-
                 <DateTimePickerModal
                   isVisible={showMorningPicker}
-                  date={convertTimeStringToDate(morningStartTime)}
                   mode="time"
+                  date={convertTimeStringToDate(defaultStartmorning)}
                   textColor="#000"
                   onConfirm={(time) => handleTimeChange(time, "morningStart")}
                   onCancel={() => setShowMorningPicker(false)}
@@ -411,7 +472,7 @@ const DoctorPreviewPage = ({navigation}) => {
 
                 <DateTimePickerModal
                   isVisible={showMorningEndPicker}
-                  date={convertTimeStringToDate(morningEndTime)}
+                  date={convertTimeStringToDate(defaultEndmorning)}
                   mode="time"
                   textColor="#000"
                   onConfirm={(time) => handleTimeChange(time, "morningEnd")}
@@ -431,7 +492,7 @@ const DoctorPreviewPage = ({navigation}) => {
                 <DateTimePickerModal
                   isVisible={showEveningPicker}
                   mode="time"
-                  date={convertTimeStringToDate(eveningStartTime)}
+                  date={convertTimeStringToDate(defaultStartEvening)}
                   textColor="#000"
                   onConfirm={(time) => handleTimeChange(time, "eveningStart")}
                   onCancel={() => setShowEveningPicker(false)}
@@ -449,7 +510,7 @@ const DoctorPreviewPage = ({navigation}) => {
 
                 <DateTimePickerModal
                   isVisible={showEveningEndPicker}
-                  date={convertTimeStringToDate(eveningEndTime)}
+                  date={convertTimeStringToDate(defaultEndEvening)}
                   mode="time"
                   textColor="#000"
                   onConfirm={(time) => handleTimeChange(time, "eveningEnd")}

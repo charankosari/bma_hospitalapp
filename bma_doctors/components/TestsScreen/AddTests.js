@@ -23,10 +23,10 @@ export default function AddDoctors() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [noOfDays, setNoOfDays] = useState(1);
   const [appointmentDuration, setAppointmentDuration] = useState(15);
-  const [morningStartTime, setMorningStartTime] = useState("09:00");
-  const [morningEndTime, setMorningEndTime] = useState("12:00");
-  const [eveningStartTime, setEveningStartTime] = useState("15:00");
-  const [eveningEndTime, setEveningEndTime] = useState("17:00");
+  const [morningStartTime, setMorningStartTime] = useState("");
+  const [morningEndTime, setMorningEndTime] = useState("");
+  const [eveningStartTime, setEveningStartTime] = useState("")
+  const [eveningEndTime, setEveningEndTime] = useState("");
   const [consultancyFee, setConsultancyFee] = useState("");
   const [loading, setLoading] = useState(false);
   const [imageSelected, setImageSelected] = useState(false);
@@ -133,13 +133,12 @@ export default function AddDoctors() {
     }
   };
   const handleAddDoctor = async () => {
-    if (!name || !consultancyFee) {
+    if (!name || !consultancyFee ||!morningStartTime||!morningEndTime||!eveningStartTime||!eveningEndTime) {
       Alert.alert("Error", "Please fill in all the fields.");
       return;
     }
-  
+
     setLoading(true);
-  
     try {
       let imageUrl = "";
       if (image) {
@@ -177,7 +176,7 @@ export default function AddDoctors() {
   
       const testData = {
         name: name,
-        image: imageUrl,
+        image: imageUrl?imageUrl:'',
         price: {
           consultancyfee: parseInt(consultancyFee),
         },
@@ -227,13 +226,12 @@ export default function AddDoctors() {
         // Reset form fields
         setImage(null);
         setName("");
-        setStartDate(new Date());
         setNoOfDays(1);
         setAppointmentDuration(15);
-        setMorningStartTime("09:00");
-        setMorningEndTime("12:00");
-        setEveningStartTime("15:00");
-        setEveningEndTime("17:00");
+        setMorningStartTime("");
+        setMorningEndTime("");
+        setEveningStartTime("");
+        setEveningEndTime("");
         setConsultancyFee("");
       } else {
         throw new Error(`Failed to add test: ${addDoctorResponse.status} ${addDoctorResponse.statusText}`);
@@ -286,7 +284,7 @@ export default function AddDoctors() {
         </View>
 
        
-        <View style={styles.inputContainer}>
+        {/* <View style={styles.inputContainer}>
           <Text style={styles.label}>Start Date</Text>
           <TouchableOpacity
             style={styles.datePickerButton}
@@ -303,7 +301,7 @@ export default function AddDoctors() {
             onConfirm={handleDateChange}
             onCancel={() => setShowDatePicker(false)}
           />
-        </View>
+        </View> */}
 
         <View style={styles.inputContainer}>
           <Text style={styles.label}>Number of Days Available</Text>
@@ -348,69 +346,74 @@ export default function AddDoctors() {
 
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Morning Timings</Text>
-          <View style={styles.timePickerContainer}>
-            <TouchableOpacity
-              style={styles.timePickerButton}
-              onPress={showMorningStartTimePicker}
-            >
-              <Text style={styles.timePickerText}>{morningStartTime}</Text>
-            </TouchableOpacity>
-            <Text style={styles.timePickerSeparator}>to</Text>
-            <TouchableOpacity
-              style={styles.timePickerButton}
-              onPress={showMorningEndTimePicker}
-            >
-              <Text style={styles.timePickerText}>{morningEndTime}</Text>
-            </TouchableOpacity>
-          </View>
-          <DateTimePickerModal
-            isVisible={isMorningStartTimePickerVisible}
-            date={convertTimeStringToDate(morningStartTime)}
-            mode="time"
-            textColor="#000"
-            onConfirm={handleMorningStartTimeConfirm}
-            onCancel={hideMorningStartTimePicker}
-          />
-          <DateTimePickerModal
-            isVisible={isMorningEndTimePickerVisible}
-            mode="time"
-            textColor="#000"
-            date={convertTimeStringToDate(morningEndTime)}
-            onConfirm={handleMorningEndTimeConfirm}
-            onCancel={hideMorningEndTimePicker}
-          />
-        </View>
+      <Text style={styles.label}>Morning Timings</Text>
+      <View style={styles.timePickerContainer}>
+        <TouchableOpacity
+          style={styles.timePickerButton}
+          onPress={showMorningStartTimePicker}
+        >
+          <Text style={styles.timePickerText}>
+            {morningStartTime || "Select Start Time"}
+          </Text>
+        </TouchableOpacity>
+        <Text style={styles.timePickerSeparator}>to</Text>
+        <TouchableOpacity
+          style={styles.timePickerButton}
+          onPress={showMorningEndTimePicker}
+        >
+          <Text style={styles.timePickerText}>
+            {morningEndTime || "Select End Time"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+      <DateTimePickerModal
+        isVisible={isMorningStartTimePickerVisible}
+        textColor="black"
+        mode="time"
+        date={morningStartTime?convertTimeStringToDate(morningStartTime):convertTimeStringToDate('09:00')}
+        onConfirm={handleMorningStartTimeConfirm}
+        onCancel={hideMorningStartTimePicker}
+      />
+      <DateTimePickerModal
+        isVisible={isMorningEndTimePickerVisible}
+        mode="time"
+           textColor="black"
+        date={morningEndTime?convertTimeStringToDate(morningEndTime):convertTimeStringToDate('12:00')}
+        onConfirm={handleMorningEndTimeConfirm}
+        onCancel={hideMorningEndTimePicker}
+      />
+    </View>
 
-        <View style={styles.inputContainer}>
+       <View style={styles.inputContainer}>
           <Text style={styles.label}>Evening Timings</Text>
           <View style={styles.timePickerContainer}>
             <TouchableOpacity
               style={styles.timePickerButton}
               onPress={showEveningStartTimePicker}
             >
-              <Text style={styles.timePickerText}>{eveningStartTime}</Text>
+              <Text style={styles.timePickerText}> {eveningStartTime || "Select start Time"}</Text>
             </TouchableOpacity>
             <Text style={styles.timePickerSeparator}>to</Text>
             <TouchableOpacity
               style={styles.timePickerButton}
               onPress={showEveningEndTimePicker}
             >
-              <Text style={styles.timePickerText}>{eveningEndTime}</Text>
+               <Text style={styles.timePickerText}> {eveningEndTime || "Select end Time"}</Text>
             </TouchableOpacity>
           </View>
           <DateTimePickerModal
             isVisible={isEveningStartTimePickerVisible}
             mode="time"
+            date={eveningStartTime?convertTimeStringToDate(eveningStartTime):convertTimeStringToDate('13:00')}
             textColor="black"
-            date={convertTimeStringToDate(eveningStartTime)}
             onConfirm={handleEveningStartTimeConfirm}
             onCancel={hideEveningStartTimePicker}
           />
           <DateTimePickerModal
             isVisible={isEveningEndTimePickerVisible}
-            date={convertTimeStringToDate(eveningEndTime)}
             mode="time"
+
+            date={eveningEndTime?convertTimeStringToDate(eveningEndTime):convertTimeStringToDate('18:00')}
             textColor="black"
             onConfirm={handleEveningEndTimeConfirm}
             onCancel={hideEveningEndTimePicker}

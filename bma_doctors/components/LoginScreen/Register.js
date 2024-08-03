@@ -136,7 +136,7 @@ const RegisterScreen = ({ navigation }) => {
       if (response.status === 200) {
         setSuccessAlert(true);
         setTimeout(() => {
-          navigation.navigate("Otp", { data: body });
+          navigation.replace("Otp", { data: body });
         }, 1000);
       } else {
         Alert.alert("Error", data.error || "Registration failed");
@@ -424,7 +424,7 @@ const RegisterScreen = ({ navigation }) => {
                       Hold and drag the marker to adjust.
                     </Text>
                     <MapView
-                        // provider={PROVIDER_GOOGLE}
+                        provider={PROVIDER_GOOGLE}
                      style={{
                         width: "100%",
                         height: 300,

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import {
   View,
   Text,
@@ -16,16 +16,21 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const AccountDetails = ({ route }) => {
   const { data } = route.params;
 
-  const [name, setName] = useState(data.hosp.hospitalName);
-  const [email, setEmail] = useState(data.hosp.email);
-  const [mobileNumber, setMobileNumber] = useState(data.hosp.number.toString());
+  const [name, setName] = useState(data.hosp.hospitalName || "");
+  const [email, setEmail] = useState(data.hosp.email || "");
+  const [mobileNumber, setMobileNumber] = useState(data.hosp.number.toString() || "");
   const [newMobileNumber, setNewMobileNumber] = useState("");
   const [otp, setOtp] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(1); 
+  const [step, setStep] = useState(1);
   const [isLoadingVerifyOtp, setIsLoadingVerifyOtp] = useState(false);
   const [isLoadingSendOtp, setIsLoadingSendOtp] = useState(false);
+  const [addressHospitalAddress, setAddressHospitalAddress] = useState(data.hosp.address[0].hospitalAddress);
+  const [addressCity, setAddressCity] = useState(data.hosp.address[0].city);
+  const [addressPincode, setAddressPincode] = useState(String(data.hosp.address[0].pincode));
+
+
   const handleChangeNumber = () => {
     setModalVisible(true);
   };
@@ -34,7 +39,7 @@ const AccountDetails = ({ route }) => {
     setModalVisible(false);
     setNewMobileNumber("");
     setOtp("");
-    setStep(1); 
+    setStep(1);
   };
 
   const handleSendOtp = async () => {
@@ -49,26 +54,26 @@ const AccountDetails = ({ route }) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ number: parseInt(newMobileNumber) }),
+          body: JSON.stringify({ number: parseInt(newMobileNumber, 10) }),
         }
       );
       const data = await response.json();
       if (response.ok) {
         alert("OTP sent successfully!");
-        setStep(2); 
+        setStep(2);
       } else {
         alert("Failed to send OTP");
       }
     } catch (error) {
       console.error("Error sending OTP:", error);
     } finally {
-      setIsLoadingSendOtp(false); 
+      setIsLoadingSendOtp(false);
     }
   };
 
   const handleVerifyOtp = async () => {
     try {
-      setIsLoadingVerifyOtp(true); 
+      setIsLoadingVerifyOtp(true);
       const token = await AsyncStorage.getItem("jwtToken");
       const response = await fetch(
         "https://server.bookmyappointments.in/api/bma/hospital/numberupdate",
@@ -81,7 +86,7 @@ const AccountDetails = ({ route }) => {
           body: JSON.stringify({
             hospid: data.hosp._id,
             number: newMobileNumber,
-            otp: parseInt(otp),
+            otp: parseInt(otp, 10),
           }),
         }
       );
@@ -96,12 +101,14 @@ const AccountDetails = ({ route }) => {
     } catch (error) {
       console.error("Error verifying OTP and updating mobile number:", error);
     } finally {
-      setIsLoadingVerifyOtp(false); 
+      setIsLoadingVerifyOtp(false);
     }
   };
 
   const handleUpdateProfile = async () => {
     try {
+    
+
       const token = await AsyncStorage.getItem("jwtToken");
       const updatedFields = {};
 
@@ -113,10 +120,32 @@ const AccountDetails = ({ route }) => {
         updatedFields.email = email;
       }
 
+      if (addressHospitalAddress !== data.hosp.address[0]?.hospitalAddress) {
+        updatedFields.address = {
+          ...(updatedFields.address || {}),
+          hospitalAddress: addressHospitalAddress,
+        };
+      }
+
+      if (addressCity !== data.hosp.address[0]?.city) {
+        updatedFields.address = {
+          ...(updatedFields.address || {}),
+          city: addressCity,
+        };
+      }
+
+      if (addressPincode !== data.hosp.address[0]?.pincode) {
+        updatedFields.address = {
+          ...(updatedFields.address || {}),
+          pincode: Number(addressPincode),
+        };
+      }
+
       if (Object.keys(updatedFields).length === 0) {
         alert("No changes to update.");
         return;
       }
+
       const response = await fetch(
         `https://server.bookmyappointments.in/api/bma/hospital/me/profileupdate`,
         {
@@ -166,6 +195,30 @@ const AccountDetails = ({ route }) => {
           />
         </View>
         <View style={styles.inputContainer}>
+          <Text style={styles.label}>Address</Text>
+
+          <TextInput
+            placeholder="Enter hospital address"
+            value={addressHospitalAddress}
+            style={styles.input}
+            onChangeText={setAddressHospitalAddress}
+          />
+
+          <TextInput
+            placeholder="Enter city"
+            value={addressCity}
+            style={styles.input}
+            onChangeText={setAddressCity}
+          />
+
+          <TextInput
+            value={addressPincode}
+            style={styles.input}
+            onChangeText={setAddressPincode}
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
           <Text style={styles.label}>Mobile Number</Text>
           <View style={styles.mobileNumberContainer}>
             <TextInput
@@ -189,7 +242,7 @@ const AccountDetails = ({ route }) => {
 
       <Modal visible={modalVisible} transparent animationType="slide">
         <KeyboardAvoidingView
-          style={{ flex: 1}}
+          style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={0}
         >
@@ -206,10 +259,10 @@ const AccountDetails = ({ route }) => {
                     keyboardType="number-pad"
                     onChangeText={setNewMobileNumber}
                   />
-                 <TouchableOpacity
+                  <TouchableOpacity
                     style={styles.modalButton}
                     onPress={handleSendOtp}
-                    disabled={isLoadingSendOtp} 
+                    disabled={isLoadingSendOtp}
                   >
                     {isLoadingSendOtp ? (
                       <ActivityIndicator color="white" />
@@ -220,16 +273,16 @@ const AccountDetails = ({ route }) => {
                 </>
               ) : (
                 <>
-                  <Text style={styles.modalTitle}>Enter OTP</Text>
+                  <Text style={styles.modalTitle}>Verify OTP</Text>
                   <TextInput
                     style={styles.modalInput}
                     placeholder="Enter OTP"
-                    value={otp}
                     placeholderTextColor={"#7d7d7d"}
+                    value={otp}
+                    keyboardType="number-pad"
                     onChangeText={setOtp}
-                    keyboardType="numeric"
                   />
-              <TouchableOpacity
+                  <TouchableOpacity
                     style={styles.modalButton}
                     onPress={handleVerifyOtp}
                     disabled={isLoadingVerifyOtp}
@@ -246,7 +299,7 @@ const AccountDetails = ({ route }) => {
                 style={styles.modalCloseButton}
                 onPress={handleCloseModal}
               >
-                <Text style={styles.modalCloseButtonText}>Cancel</Text>
+                <Text style={styles.modalCloseText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -18,6 +18,8 @@ import AddTests from './components/TestsScreen/AddTests'
 import TestPreview from './components/TestsScreen/TestPreview'
 import BookingTests from './components/TestsScreen/BookingsTests'
 import { enableScreens } from 'react-native-screens';
+import TermsAndConditions from './components/SettingsScreens/TermsAndConditions'
+import PrivacyPolicy from './components/SettingsScreens/PrivacyPolicy'
 enableScreens();
 const Stack = createNativeStackNavigator();
 
@@ -106,6 +108,14 @@ export default function App() {
           name="My Bookings"
           component={BookingTests}
           options={{ headerShown: false }}
+        />
+          <Stack.Screen
+          name="Terms and conditions"
+          component={TermsAndConditions}
+        />
+        <Stack.Screen
+          name="Privacy Policy"
+          component={PrivacyPolicy}
         />
       </Stack.Navigator>
     </NavigationContainer>
