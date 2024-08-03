@@ -296,10 +296,10 @@ const AccountDetails = ({ route }) => {
                 </>
               )}
               <TouchableOpacity
-                style={styles.modalCloseButton}
+                style={styles.modalCloseButtonn}
                 onPress={handleCloseModal}
               >
-                <Text style={styles.modalCloseText}>Close</Text>
+                <Text style={styles.modalCloseButtonnText}>Close</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -399,13 +399,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
   },
-  modalCloseButton: {
+  modalCloseButtonn: {
     backgroundColor: "#6C757D",
     paddingVertical: 12,
     borderRadius: 5,
     marginTop: 10,
   },
-  modalCloseButtonText: {
+  modalCloseButtonnText: {
     color: "white",
     fontSize: 16,
     textAlign: "center",

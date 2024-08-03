@@ -64,7 +64,6 @@ const DoctorPreviewPage = ({ navigation }) => {
     const fetchJWT = async () => {
       const token = await AsyncStorage.getItem("jwtToken");
       setJwtToken(token);
-      console.log(token)
     };
     fetchJWT();
   }, []);
@@ -147,7 +146,6 @@ const DoctorPreviewPage = ({ navigation }) => {
       );
 
       const data = await response.json();
-      console.log(data);
 
       if (response.status !== 200) {
         throw new Error(data.error || "Failed to upload image");
@@ -204,7 +202,6 @@ const DoctorPreviewPage = ({ navigation }) => {
               }
 
               Alert.alert("Success", "Doctor deleted successfully");
-              console.log("Doctor deleted successfully");
               navigation.goBack();
             } catch (error) {
               console.error(error);
@@ -216,8 +213,55 @@ const DoctorPreviewPage = ({ navigation }) => {
     );
   };
   const handleSaveSlots = async () => {
-    const currentDate = moment();
-    const selectedDate = moment(startDate); 
+  
+    const parseTime = (time) => {
+      const hasPeriod = time.toLowerCase().includes('am') || time.toLowerCase().includes('pm');
+      let hours, minutes;
+      
+      if (hasPeriod) {
+        const [timePart, period] = time.split(' ');
+        [hours, minutes] = timePart.split(':').map(Number);
+        
+        if (period.toLowerCase() === 'pm' && hours !== 12) {
+          hours += 12;
+        }
+        if (period.toLowerCase() === 'am' && hours === 12) {
+          hours = 0;
+        }
+      } else {
+        [hours, minutes] = time.split(':').map(Number);
+      }
+      
+      return hours * 60 + minutes;
+    };
+    const convertTo24 = (time) => {
+      const hasPeriod = time.includes('am') || time.includes('pm') || time.includes('AM') || time.includes('PM');
+      let hours, minutes;
+      
+      if (hasPeriod) {
+        const [timePart, period] = time.split(' ');
+        [hours, minutes] = timePart.split(':').map(Number);
+        
+        if (period.toLowerCase() === 'pm' && hours !== 12) {
+          hours += 12;
+        }
+        if (period.toLowerCase() === 'am' && hours === 12) {
+          hours = 0;
+        }
+      } else {
+        [hours, minutes] = time.split(':').map(Number);
+      }
+      const formattedHours = String(hours).padStart(2, '0');
+      const formattedMinutes = String(minutes).padStart(2, '0');
+      return `${formattedHours}:${formattedMinutes}`;
+    };
+    
+  
+    const morningStart = parseTime(morningStartTime);
+    const morningEnd = parseTime(morningEndTime);
+    const eveningStart = parseTime(eveningStartTime);
+    const eveningEnd = parseTime(eveningEndTime);
+   
     setLoading(true);
     if (
       !startDate ||
@@ -231,9 +275,10 @@ const DoctorPreviewPage = ({ navigation }) => {
       setLoading(false); 
       return;
     }
+    const currentDate = moment().startOf('day'); 
+    const selectedDate = moment(startDate).startOf('day'); 
     if (selectedDate.isBefore(currentDate)) {
-      alert("Please select a date from today");
-      setLoading(false); 
+      Alert.alert("Error", "Please select a date from today onwards.");
       return;
     }
     const formattedDate = moment(startDate).format("YYYY-MM-DD");
@@ -243,6 +288,18 @@ const DoctorPreviewPage = ({ navigation }) => {
       setLoading(false); 
       return;
     }
+    if (morningStart >= morningEnd) {
+      Alert.alert("Error", "Select the timings correctly.");
+      return;
+    }
+    if (eveningStart >= eveningEnd) {
+      Alert.alert("Error", "Select the timings correctly.");
+      return;
+    }
+    if (morningEnd >= eveningStart) {
+      Alert.alert("Error", "Select the timings correctly.");
+      return;
+    }
 
     const payload = {
       doctorId: doctor.id,
@@ -250,14 +307,15 @@ const DoctorPreviewPage = ({ navigation }) => {
       noOfDays,
       slotTimings: 30,
       morning: {
-        startTime: morningStartTime,
-        endTime: morningEndTime,
+        startTime: convertTo24(morningStartTime),
+        endTime:convertTo24(morningEndTime),
       },
       evening: {
-        startTime: eveningStartTime,
-        endTime: eveningEndTime,
+        startTime: convertTo24(eveningStartTime),
+        endTime: convertTo24(eveningEndTime),
       },
     };
+
     try {
       const response = await fetch(
         "https://server.bookmyappointments.in/api/bma/hospital/me/addmoresessions",
@@ -274,6 +332,8 @@ const DoctorPreviewPage = ({ navigation }) => {
         throw new Error("Failed to save slots");
       }
       alert("Slots saved successfully!");
+      onCloseManageSlots()
+
       setLoading(false);
     } catch (error) {
       console.error(error);
@@ -439,8 +499,7 @@ const DoctorPreviewPage = ({ navigation }) => {
   style={styles.closeButton}
 >
   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-    <Text style={{color:'red'}}>Close</Text>
-    <Ionicons name="close-circle" size={24} color="red" style={{ marginLeft: 5 }} />
+    <Ionicons name="close-circle" size={36} color="red" style={{ marginLeft: 5 }} />
   </View>
 </TouchableOpacity>
 
@@ -645,7 +704,6 @@ const styles = StyleSheet.create({
     width: "20px",
     height: "20px",
     padding:'30px',
-    zIndex:'999'
   },
   modalTitle: {
     fontSize: 18,

@@ -150,7 +150,7 @@ export default function AddDoctors({navigation}) {
 
     
   if (!result.canceled) {
-    if (result.fileSize && result.fileSize > 2 * 1024 * 1024) {
+    if (result.assets[0].fileSize && result.assets[0].fileSize > 2 * 1024 * 1024) {
       alert("Image size exceeds 2MB. Please select a smaller image.");
       return;
     }
@@ -159,8 +159,29 @@ export default function AddDoctors({navigation}) {
   }
   };
   const handleAddDoctor = async () => {
-    if (!name || !speciality || qualifications.length === 0 || !consultancyFee ||!morningStartTime||!morningEndTime||!eveningStartTime||!eveningEndTime) {
+    if (!name || !speciality || qualifications.length === 0 || !consultancyFee ||!morningStartTime||!morningEndTime||!eveningStartTime||!eveningEndTime || !image) {
       Alert.alert("Error", "Please fill in all the fields.");
+      return;
+    }
+    const parseTime = (time) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes; // Convert time to minutes
+    };
+  
+    const morningStart = parseTime(morningStartTime);
+    const morningEnd = parseTime(morningEndTime);
+    const eveningStart = parseTime(eveningStartTime);
+    const eveningEnd = parseTime(eveningEndTime);
+    if (morningStart >= morningEnd) {
+      Alert.alert("Error", "Select the timings correctly.");
+      return;
+    }
+    if (eveningStart >= eveningEnd) {
+      Alert.alert("Error", "Select the timings correctly.");
+      return;
+    }
+    if (morningEnd >= eveningStart) {
+      Alert.alert("Error", "Select the timings correctly.");
       return;
     }
   
@@ -285,7 +306,7 @@ export default function AddDoctors({navigation}) {
         <Text style={styles.title}>Add Doctor</Text>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Doctor Photo</Text>
+          <Text style={styles.label}>Doctor Photo  :</Text>
           {!imageSelected && (
             <TouchableOpacity
               style={styles.imageUploadButton}
@@ -308,7 +329,7 @@ export default function AddDoctors({navigation}) {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Name</Text>
+          <Text style={styles.label}>Name  :</Text>
           <TextInput
             style={styles.input}
             value={name}
@@ -318,7 +339,7 @@ export default function AddDoctors({navigation}) {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Speciality</Text>
+          <Text style={styles.label}>Speciality  :</Text>
           <RNPickerSelect
             style={pickerSelectStyles}
             onValueChange={(value) => setSpeciality(value)}
@@ -332,7 +353,7 @@ export default function AddDoctors({navigation}) {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Qualifications</Text>
+          <Text style={styles.label}>Qualifications  :</Text>
           <ScrollView horizontal style={styles.qualificationsContainer}>
             {qualificationsOptions.map((qual) => (
               <TouchableOpacity
@@ -359,28 +380,9 @@ export default function AddDoctors({navigation}) {
             ))}
           </ScrollView>
         </View>
-        {/* <View style={styles.inputContainer}>
-          <Text style={styles.label}>Start Date</Text>
-          <TouchableOpacity
-            style={styles.datePickerButton}
-            onPress={() => setShowDatePicker(true)}
-          >
-            <Text style={styles.datePickerText}>
-              {startDate.toLocaleDateString()}
-            </Text>
-          </TouchableOpacity>
-          <DateTimePickerModal
-            isVisible={showDatePicker}
-            mode="date"
-            
-            textColor="#000"
-            onConfirm={handleDateChange}
-            onCancel={() => setShowDatePicker(false)}
-          />
-        </View> */}
-
+      
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Number of Days Available</Text>
+          <Text style={styles.label}>Number of Days Available  :</Text>
           <Slider
         value={noOfDays}
         minimumValue={1}
@@ -397,7 +399,7 @@ export default function AddDoctors({navigation}) {
         </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Appointment Duration (minutes)</Text>
+          <Text style={styles.label}>Appointment Duration (minutes)  :</Text>
           <Slider
             value={appointmentDuration}
             minimumValue={15}
@@ -414,7 +416,7 @@ export default function AddDoctors({navigation}) {
         </View>
       
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Consultancy Fee </Text>
+          <Text style={styles.label}>Consultancy Fee  :</Text>
           <TextInput
             style={styles.input}
             value={consultancyFee}
@@ -424,7 +426,7 @@ export default function AddDoctors({navigation}) {
           />
         </View>
         <View style={styles.inputContainer}>
-      <Text style={styles.label}>Morning Timings</Text>
+      <Text style={styles.label}>Morning Timings :</Text>
       <View style={styles.timePickerContainer}>
         <TouchableOpacity
           style={styles.timePickerButton}
@@ -463,7 +465,7 @@ export default function AddDoctors({navigation}) {
     </View>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.label}>Evening Timings</Text>
+          <Text style={styles.label}>Evening Timings :</Text>
           <View style={styles.timePickerContainer}>
             <TouchableOpacity
               style={styles.timePickerButton}
@@ -490,7 +492,6 @@ export default function AddDoctors({navigation}) {
           <DateTimePickerModal
             isVisible={isEveningEndTimePickerVisible}
             mode="time"
-
             date={eveningEndTime?convertTimeStringToDate(eveningEndTime):convertTimeStringToDate('18:00')}
             textColor="black"
             onConfirm={handleEveningEndTimeConfirm}

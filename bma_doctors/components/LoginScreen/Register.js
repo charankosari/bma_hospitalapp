@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   Keyboard,
   Alert,
-  ActivityIndicator,  
+  ActivityIndicator,
   TouchableWithoutFeedback,
   Dimensions,
   Image,
@@ -19,7 +19,7 @@ import * as Location from "expo-location";
 import MapView, { Marker } from "react-native-maps";
 import { PROVIDER_GOOGLE } from "react-native-maps";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
-
+import { MaterialIcons } from "@expo/vector-icons";
 const RegisterScreen = ({ navigation }) => {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -36,10 +36,9 @@ const RegisterScreen = ({ navigation }) => {
   const [currentStep, setCurrentStep] = useState(1);
 
   const handleLocationSelect = (data, details) => {
-    const { geometry, formatted_address } = details;
+    const { geometry } = details;
     setLatitude(geometry.location.lat);
     setLongitude(geometry.location.lng);
-    setAddress(formatted_address);
   };
 
   useEffect(() => {
@@ -171,7 +170,7 @@ const RegisterScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1,backgroundColor:'#ffffff' }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -310,6 +309,7 @@ const RegisterScreen = ({ navigation }) => {
                       paddingHorizontal: 8,
                       fontSize: 16,
                     }}
+                    keyboardType="number-pad"
                     value={pincode}
                     onChangeText={setPincode}
                     editable={!loading}
@@ -328,6 +328,59 @@ const RegisterScreen = ({ navigation }) => {
                     onChangeText={setCity}
                     editable={!loading}
                   />
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 12,
+                    }}
+                  >
+                    <Text style={{ textAlign: "center",fontWeight:'bold' }}>
+                      Pick an image (optional) :
+                    </Text>
+                    <TouchableOpacity onPress={pickImage} disabled={loading}>
+                      <View
+                        style={{
+                          backgroundColor: image?"#ffffff":"#2BB673",
+                          padding: 10,
+                          borderRadius: 5,
+                          alignItems: "center",
+                        }}
+                      >
+                        {!image ? (
+                          <Text style={{ color: "white", fontSize: 16 }}>
+                            Pick an Image
+                          </Text>
+                        ) : (
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Image
+                              source={{ uri: image.assets[0].uri }}
+                              style={{
+                                width: 50,
+                                height: 50,
+                                borderRadius: 5,
+                                marginRight: 5,
+                              }}
+                            />
+                            <TouchableOpacity onPress={()=>{setImage(null)}}>
+                              <MaterialIcons
+                                name="cancel"
+                                size={24}
+                                color="red"
+                              />
+                            </TouchableOpacity>
+                          </View>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  </View>
+
                   <TouchableOpacity onPress={handleNextStep} disabled={loading}>
                     <View
                       style={{
@@ -424,8 +477,8 @@ const RegisterScreen = ({ navigation }) => {
                       Hold and drag the marker to adjust.
                     </Text>
                     <MapView
-                        provider={PROVIDER_GOOGLE}
-                     style={{
+                      provider={PROVIDER_GOOGLE}
+                      style={{
                         width: "100%",
                         height: 300,
                         marginVertical: 12,
@@ -449,33 +502,7 @@ const RegisterScreen = ({ navigation }) => {
                         }}
                       />
                     </MapView>
-                    <TouchableOpacity onPress={pickImage} disabled={loading}>
-                      <View
-                        style={{
-                          backgroundColor: "#2BB673",
-                          padding: 10,
-                          borderRadius: 5,
-                          alignItems: "center",
-                          marginBottom: 12,
-                        }}
-                      >
-                        <Text style={{ color: "white", fontSize: 16 }}>
-                          {image ? "Change Image" : "Pick an Image"}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                    {image && (
-                      <Image
-                        source={{ uri: image.assets[0].uri }}
-                        style={{
-                          width: 100,
-                          height: 100,
-                          borderRadius: 50,
-                          alignSelf: "center",
-                          marginBottom: 12,
-                        }}
-                      />
-                    )}
+
                     <TouchableOpacity
                       onPress={handleRegister}
                       disabled={loading}
