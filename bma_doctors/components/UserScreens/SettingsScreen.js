@@ -57,21 +57,29 @@ const SettingsScreen = ({ navigation }) => {
       fetchHospitalDetails();
     }, [])
   );
-
   const handleImageUpload = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
       alert("Permission to access camera roll is required!");
       return;
     }
-
+  
     const pickerResult = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       quality: 1,
     });
-
+  
     if (!pickerResult.canceled) {
+      const uri = pickerResult.assets[0].uri;
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const fileSizeInBytes = blob.size;
+      const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+      if (fileSizeInMB > 2) {
+        alert('The selected image is larger than 2MB. Please select a smaller image.');
+        return;
+      }
       setImage(pickerResult);
       setUploading(true); // Show loading indicator
       uploadImage(pickerResult);

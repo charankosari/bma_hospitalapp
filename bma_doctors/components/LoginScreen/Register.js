@@ -151,22 +151,28 @@ const RegisterScreen = ({ navigation }) => {
     }
   };
 
-  const pickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      alert("Sorry, we need camera roll permissions to make this work!");
+ const pickImage = async () => {
+  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (status !== 'granted') {
+    alert('Sorry, we need camera roll permissions to make this work!');
+    return;
+  }
+
+  let result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    allowsEditing: true,
+    quality: 1,
+  });
+
+  if (!result.canceled) {
+    const fileSizeInBytes = result.assets[0].fileSize; // Assuming the file size is available
+    const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+    if (fileSizeInMB > 2) {
+      alert('The selected image is larger than 2MB. Please select a smaller image.');
       return;
     }
-
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setImage(result);
-    }
+    setImage(result);
+  }
   };
 
   return (
